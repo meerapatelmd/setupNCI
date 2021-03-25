@@ -1,3 +1,34 @@
+#' @title
+#' Load the Code to CUI Map
+#'
+#' @description
+#' The Code to CUI Map is provided as a `dat` file.
+#'
+#' @inheritParams package_arguments
+#'
+#' @seealso
+#'  \code{\link[xml2]{read_xml}}
+#'  \code{\link[rvest]{html_nodes}},\code{\link[rvest]{html_table}}
+#'  \code{\link[dplyr]{select}},\code{\link[dplyr]{mutate}}
+#'  \code{\link[rubix]{format_colnames}},\code{\link[rubix]{filter_at_grepl}}
+#'  \code{\link[lubridate]{as_date}}
+#'  \code{\link[stringr]{str_replace}}
+#'  \code{\link[readr]{read_delim}}
+#'  \code{\link[pg13]{schema_exists}},\code{\link[pg13]{create_schema}},\code{\link[pg13]{write_table}},\code{\link[pg13]{table_exists}},\code{\link[pg13]{send}},\code{\link[pg13]{append_table}}
+#'  \code{\link[SqlRender]{render}}
+#'  \code{\link[tibble]{tibble}}
+#' @rdname load_code_cui_map
+#' @export
+#' @importFrom xml2 read_html
+#' @importFrom rvest html_node html_table
+#' @importFrom dplyr select mutate
+#' @importFrom rubix format_colnames filter_at_grepl
+#' @importFrom lubridate as_datetime
+#' @importFrom stringr str_replace_all
+#' @importFrom readr read_delim
+#' @importFrom pg13 schema_exists create_schema write_table table_exists send append_table
+#' @importFrom SqlRender render
+#' @importFrom tibble tibble
 load_code_cui_map <-
   function(conn,
            schema = "nci",
