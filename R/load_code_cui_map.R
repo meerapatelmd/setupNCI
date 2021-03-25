@@ -2,9 +2,25 @@
 #' Load the Code to CUI Map
 #'
 #' @description
-#' The Code to CUI Map is provided as a `dat` file.
+#' The Code to CUI Map is provided as a `dat` file is written
+#' to the `CODE_CUI_MAP` table in the given schema.
 #'
 #' @inheritParams package_arguments
+#'
+#' @details
+#' The `dat` file contains the map of NCI Thesaurus (NCIt) codes
+#' to NCI Metathesaurus (NCIMeta) CUIs (concept unique
+#' identifier). The CUIs are either derived from the UMLS
+#' Metathesaurus (CUIs that begin with "C-digit") or
+#' specific to the NCI Metathesaurus (CUIs that begin with
+#' "CL").  This mapping file is created for each release of
+#' the NCIMeta, which is published on a quarterly schedule
+#' hence is not current with every release of NCIt which is
+#' published monthly. Newly created Thesaurus concepts will
+#' not appear in this file until the next release of the
+#' Metathesaurus, and newly retired Thesaurus concepts will
+#' continue to appear until the next release of the
+#' Metathesaurus.
 #'
 #' @seealso
 #'  \code{\link[xml2]{read_xml}}
