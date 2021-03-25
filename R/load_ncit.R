@@ -79,14 +79,16 @@ flat_file_version <-
     replacement = "\\1"
   )
 
-nci_temp_dir <- tempdir()
+nci_temp_dir <- tempdir(check = TRUE)
+
 on.exit(unlink(x = nci_temp_dir,
                recursive = TRUE))
 
 flat_file_dl_path <- file.path(nci_temp_dir, most_recent_flat_file)
 download.file(url = sprintf("https://evs.nci.nih.gov/ftp1/NCI_Thesaurus/%s",
                             most_recent_flat_file),
-              destfile = flat_file_dl_path)
+              destfile = flat_file_dl_path,
+              cacheOK = FALSE)
 utils::unzip(zipfile = flat_file_dl_path,
              exdir = nci_temp_dir)
 
@@ -135,7 +137,9 @@ if (!pg13::table_exists(conn = conn,
             nci_version VARCHAR(25)
 
         )
-        "
+        ",
+        log_schema = log_schema,
+        log_table = log_table
       )
   )
 
