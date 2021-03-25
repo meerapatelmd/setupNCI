@@ -81,9 +81,6 @@ flat_file_version <-
 
 nci_temp_dir <- tempdir(check = TRUE)
 
-on.exit(unlink(x = nci_temp_dir,
-               recursive = TRUE))
-
 flat_file_dl_path <- file.path(nci_temp_dir, most_recent_flat_file)
 download.file(url = sprintf("https://evs.nci.nih.gov/ftp1/NCI_Thesaurus/%s",
                             most_recent_flat_file),
