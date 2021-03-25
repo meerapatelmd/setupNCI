@@ -103,6 +103,14 @@ thesaurus_text <-
                                 'semantic_type'),
   )
 
+if (!pg13::schema_exists(conn = conn,
+                        schema = schema)) {
+  pg13::create_schema(
+    conn = conn,
+    schema = schema
+  )
+}
+
 
 pg13::write_table(
   conn = conn,
