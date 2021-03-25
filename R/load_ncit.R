@@ -1,5 +1,3 @@
-
-
 load_ncit <-
   function(conn,
            schema = "nci",
