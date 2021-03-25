@@ -1,3 +1,42 @@
+#' @title FUNCTION_TITLE
+#' @description FUNCTION_DESCRIPTION
+#' @param conn PARAM_DESCRIPTION
+#' @param schema PARAM_DESCRIPTION, Default: 'nci'
+#' @param log_schema PARAM_DESCRIPTION, Default: 'public'
+#' @param log_table PARAM_DESCRIPTION, Default: 'setup_nci_log'
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples 
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @seealso 
+#'  \code{\link[xml2]{read_xml}}
+#'  \code{\link[rvest]{html_nodes}},\code{\link[rvest]{html_table}}
+#'  \code{\link[dplyr]{select}},\code{\link[dplyr]{mutate}},\code{\link[dplyr]{arrange}},\code{\link[dplyr]{desc}},\code{\link[dplyr]{filter}},\code{\link[dplyr]{ranking}}
+#'  \code{\link[rubix]{format_colnames}},\code{\link[rubix]{filter_at_grepl}}
+#'  \code{\link[lubridate]{as_date}}
+#'  \code{\link[stringr]{str_replace}}
+#'  \code{\link[utils]{unzip}}
+#'  \code{\link[readr]{read_delim}}
+#'  \code{\link[pg13]{write_table}},\code{\link[pg13]{table_exists}},\code{\link[pg13]{send}},\code{\link[pg13]{append_table}}
+#'  \code{\link[SqlRender]{render}}
+#'  \code{\link[tibble]{tibble}}
+#' @rdname load_ncit
+#' @export 
+#' @importFrom xml2 read_html
+#' @importFrom rvest html_node html_table
+#' @importFrom dplyr select mutate arrange desc filter row_number
+#' @importFrom rubix format_colnames filter_at_grepl
+#' @importFrom lubridate as_datetime
+#' @importFrom stringr str_replace_all
+#' @importFrom utils unzip
+#' @importFrom readr read_tsv
+#' @importFrom pg13 write_table table_exists send append_table
+#' @importFrom SqlRender render
+#' @importFrom tibble tibble
 load_ncit <-
   function(conn,
            schema = "nci",
