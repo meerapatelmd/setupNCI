@@ -1,4 +1,24 @@
-#https://evs.nci.nih.gov/evs-download/metathesaurus-downloads
+#' @title
+#' Load NCI Metathesaurus
+#'
+#' @description
+#' Load the NCI Metathesaurus RRF files that are downloaded
+#' from \href{https://evs.nci.nih.gov/evs-download/metathesaurus-downloads}{NIH EVS}.
+#'
+#' @inheritParams package_arguments
+#' @param ncim_version NCI Metathesaurus version
+#'
+#' @seealso
+#'  \code{\link[metathesaurus]{setup_pg_mth}}
+#'  \code{\link[pg13]{table_exists}},\code{\link[pg13]{send}},\code{\link[pg13]{append_table}}
+#'  \code{\link[SqlRender]{render}}
+#'  \code{\link[tibble]{tibble}}
+#' @rdname load_ncim
+#' @export
+#' @importFrom metathesaurus setup_pg_mth
+#' @importFrom pg13 table_exists send append_table
+#' @importFrom SqlRender render
+#' @importFrom tibble tibble
 load_ncim <-
 function(conn,
           schema = "nci",
