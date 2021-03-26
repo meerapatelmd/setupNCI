@@ -3,17 +3,18 @@ load_ncim <-
 function(conn,
           schema = "nci",
           path_to_rrfs,
-         steps = c("reset_schema", "ddl_tables", "copy_rrfs", "add_indexes"),
          log_schema = "public",
          log_table = "setup_nci_log",
-         ncim_version = "202008") {
+         ncim_version) {
 
 
   metathesaurus::setup_pg_mth(
     conn = conn,
     schema = schema,
     path_to_rrfs = path_to_rrfs,
-    steps = steps
+    steps = c("reset_schema", "ddl_tables", "copy_rrfs", "add_indexes"),
+    log_version = "",
+    log_release_date = ""
   )
 
 
