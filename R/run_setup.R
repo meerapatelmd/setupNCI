@@ -1,3 +1,15 @@
+#' @title
+#' Run NCI Setup
+#'
+#' @description
+#' Load the NCI Metathesaurus RRF files, followed by the
+#' NCI Thesaurus and the Code to CUI Map.
+#'
+#' @inheritParams package_arguments
+#' @inheritParams load_ncim
+
+#' @rdname run_setup
+#' @export
 run_setup <-
   function(conn,
            schema = "nci",
