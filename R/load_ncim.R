@@ -7,6 +7,10 @@ function(conn,
          log_table = "setup_nci_log",
          ncim_version) {
 
+  if (missing(ncim_version)) {
+    stop("`ncim_version` is required.")
+  }
+
 
   metathesaurus::setup_pg_mth(
     conn = conn,
