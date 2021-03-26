@@ -16,16 +16,17 @@ knitr::opts_chunk$set(
 # setupNCI
 
 <!-- badges: start -->
-[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
-[![CRAN status](https://www.r-pkg.org/badges/version/setupNCIt)](https://CRAN.R-project.org/package=setupNCIt)
 <!-- badges: end -->
+
+The goal of setupNCI is to instantiate the latest versions of 
+the NCI Metathesaurus and NCI Thesaurus along with the map 
+between the two in a Postgres database.  
 
 ## Installation
 
-You can install setupNCI from [GitHub](https://github.com) with:
+You can install the development version from [GitHub](https://github.com/) with:
 
 ``` r
-# install.packages("devtools)  
-devtools::install_github("meerapatelmd/setupNCI")  
+# install.packages("devtools")
+devtools::install_github("meerapatelmd/setupNCI")
 ```
-
