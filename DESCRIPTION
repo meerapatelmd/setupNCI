@@ -1,6 +1,6 @@
 Package: setupNCI
-Title: Load the NCI Metathesaurus, NCI Thesaurus, and the 
-map between both into Postgres. 
+Title: Load the NCI Metathesaurus, NCI Thesaurus, and the
+    map between both into Postgres. 
 Version: 0.1.0
 Authors@R: 
     person(given = "Meera",
@@ -8,22 +8,16 @@ Authors@R:
            role = c("aut", "cre"),
            email = "mpatel@concertai.com",
            comment = c(ORCID = "0000-0002-3401-3948"))
-Description: Load the NCI Metathesaurus, NCI Thesaurus, and the 
-map between both into Postgres. The NCI Metathesaurus follows 
-the same standards as those found in the `metathesaurus` R 
-package while the NCI Thesaurus and the Code to CUI Map are 
-two additional tables added during the setup process. 
+Description: Load the NCI Metathesaurus, NCI Thesaurus, and the
+    map between both into Postgres. The NCI Metathesaurus follows the same
+    standards as those found in the `metathesaurus` R package while the
+    NCI Thesaurus and the Code to CUI Map are two additional tables added
+    during the setup process.
 License: MIT + file LICENSE
-Suggests: 
-    roxygen2,
-    testthat (>= 3.0.0)
-Config/testthat/edition: 3
-Encoding: UTF-8
-LazyData: true
-Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.1.1
+URL: https://meerapatelmd.github.io/setupNCI/,
+    https://github.com/meerapatelmd/setupNCI/
+BugReports: https://github.com/meerapatelmd/setupNCI/issues/
 Imports:
-    SqlRender,
     dplyr,
     lubridate,
     magrittr,
@@ -33,9 +27,16 @@ Imports:
     rlang (>= 0.1.2),
     rubix,
     rvest,
+    SqlRender,
     stringr,
     tibble,
     utils,
     xml2
-URL: https://meerapatelmd.github.io/setupNCI/, https://github.com/meerapatelmd/setupNCI/
-BugReports: https://github.com/meerapatelmd/setupNCI/issues/
+Suggests: 
+    roxygen2,
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.1
