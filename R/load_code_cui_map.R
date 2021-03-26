@@ -45,6 +45,8 @@
 #' @importFrom pg13 schema_exists create_schema write_table table_exists send append_table
 #' @importFrom SqlRender render
 #' @importFrom tibble tibble
+#' @importFrom magrittr %>%
+
 load_code_cui_map <-
   function(conn,
            schema = "nci",

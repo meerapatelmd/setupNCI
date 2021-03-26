@@ -32,6 +32,7 @@
 #' @importFrom pg13 write_table table_exists send append_table
 #' @importFrom SqlRender render
 #' @importFrom tibble tibble
+#' @importFrom magrittr %>%
 
 load_ncit <-
   function(conn,
