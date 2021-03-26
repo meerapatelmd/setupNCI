@@ -7,9 +7,11 @@
 #'
 #' @inheritParams package_arguments
 #' @inheritParams load_ncim
-
+#'
 #' @rdname run_setup
+#'
 #' @export
+
 run_setup <-
   function(conn,
            schema = "nci",
