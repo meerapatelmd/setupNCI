@@ -21,6 +21,25 @@ You can install the development version from
 devtools::install_github("meerapatelmd/setupNCI")
 ```
 
+## Execution
+
+A complete instance of instantiation involves 3 steps:
+
+``` r
+conn <- pg13::local_connect()
+
+# 1. Load NCI Metathesaurus  
+load_ncim(conn = conn, 
+          path_to_rrfs = "~/Desktop/Metathesaurus.RRF/META",
+          ncim_version = "202008")
+
+# 2. Load NCI Thesaurus  
+load_ncit(conn = conn)
+
+# 3. Load Code to CUI Map  
+load_code_cui_map(conn = conn)  
+```
+
 ## Code of Conduct
 
 Please note that the setupNCI project is released with a [Contributor
