@@ -1,12 +1,12 @@
 Package: setupNCI
 Title: Load the NCI Metathesaurus, NCI Thesaurus, and the
     map between both into Postgres. 
-Version: 0.1.0
+Version: 1.1.0
 Authors@R: 
     person(given = "Meera",
            family = "Patel",
            role = c("aut", "cre"),
-           email = "mpatel@concertai.com",
+           email = "patelmeeray@gmail.com",
            comment = c(ORCID = "0000-0002-3401-3948"))
 Description: Load the NCI Metathesaurus, NCI Thesaurus, and the
     map between both into Postgres. The NCI Metathesaurus follows the same

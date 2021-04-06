@@ -1,3 +1,12 @@
-# setupNCI 0.1.0
+# setupNCI 1.1.0  
 
-* Added a `NEWS.md` file to track changes to the package.
+* Fixed load error by expanding limit for CUI fields to 
+10 characters because some NCI CUIs are prefixed with `CL`.  
+* To prevent losing an existing `Thesaurus` and/or 
+`Code To CUI Map` table/s, changed drop cascade of the 
+target schema to dropping only NCI Metathesaurus tables.  
+
+
+# setupNCI 0.1.0  
+
+* Added first version  
