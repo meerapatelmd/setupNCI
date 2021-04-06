@@ -71,7 +71,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">setupNCI</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.1.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">1.1.0</span>
       </span>
     </div>
 
@@ -114,11 +114,20 @@
       <small>Source: <a href='https://github.com/meerapatelmd/setupNCI/blob/master/NEWS.md'><code>NEWS.md</code></a></small>
     </div>
 
+    <div id="setupnci-1-1-0" class="section level1">
+<h1 class="page-header" data-toc-text="1.1.0">
+<a href="#setupnci-1-1-0" class="anchor"></a>setupNCI 1.1.0</h1>
+<ul>
+<li>Fixed load error by expanding limit for CUI fields to 10 characters because some NCI CUIs are prefixed with <code>CL</code>.<br>
+</li>
+<li>To prevent losing an existing <code>Thesaurus</code> and/or <code>Code To CUI Map</code> table/s, changed drop cascade of the target schema to dropping only NCI Metathesaurus tables.</li>
+</ul>
+</div>
     <div id="setupnci-0-1-0" class="section level1">
 <h1 class="page-header" data-toc-text="0.1.0">
 <a href="#setupnci-0-1-0" class="anchor"></a>setupNCI 0.1.0</h1>
 <ul>
-<li>Added a <code>NEWS.md</code> file to track changes to the package.</li>
+<li>Added first version</li>
 </ul>
 </div>
   </div>

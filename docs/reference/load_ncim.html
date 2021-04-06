@@ -73,7 +73,7 @@ from NIH EVS." />
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">setupNCI</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.1.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">1.1.0</span>
       </span>
     </div>
 
@@ -126,9 +126,16 @@ from <a href='https://evs.nci.nih.gov/evs-download/metathesaurus-downloads'>NIH 
   <span class='va'>conn</span>,
   schema <span class='op'>=</span> <span class='st'>"nci"</span>,
   <span class='va'>path_to_rrfs</span>,
+  steps <span class='op'>=</span> <span class='fu'><a href='https://rdrr.io/r/base/c.html'>c</a></span><span class='op'>(</span><span class='st'>"reset_schema"</span>, <span class='st'>"ddl_tables"</span>, <span class='st'>"copy_rrfs"</span>, <span class='st'>"add_indexes"</span>, <span class='st'>"log"</span><span class='op'>)</span>,
   log_schema <span class='op'>=</span> <span class='st'>"public"</span>,
   log_table <span class='op'>=</span> <span class='st'>"setup_nci_log"</span>,
-  <span class='va'>ncim_version</span>
+  <span class='va'>ncim_version</span>,
+  mrconso_only <span class='op'>=</span> <span class='cn'>FALSE</span>,
+  omop_only <span class='op'>=</span> <span class='cn'>FALSE</span>,
+  english_only <span class='op'>=</span> <span class='cn'>TRUE</span>,
+  verbose <span class='op'>=</span> <span class='cn'>TRUE</span>,
+  render_sql <span class='op'>=</span> <span class='cn'>TRUE</span>,
+  render_only <span class='op'>=</span> <span class='cn'>FALSE</span>
 <span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
