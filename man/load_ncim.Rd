@@ -8,9 +8,16 @@ load_ncim(
   conn,
   schema = "nci",
   path_to_rrfs,
+  steps = c("reset_schema", "ddl_tables", "copy_rrfs", "add_indexes", "log"),
   log_schema = "public",
   log_table = "setup_nci_log",
-  ncim_version
+  ncim_version,
+  mrconso_only = FALSE,
+  omop_only = FALSE,
+  english_only = TRUE,
+  verbose = TRUE,
+  render_sql = TRUE,
+  render_only = FALSE
 )
 }
 \arguments{
