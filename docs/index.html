@@ -37,7 +37,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="index.html">setupNCI</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.1.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">1.1.0</span>
       </span>
     </div>
 
@@ -88,6 +88,24 @@
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span class="co"># install.packages("devtools")</span>
 <span class="fu">devtools</span><span class="fu">::</span><span class="fu"><a href="https://devtools.r-lib.org//reference/remote-reexports.html">install_github</a></span><span class="op">(</span><span class="st">"meerapatelmd/setupNCI"</span><span class="op">)</span></code></pre></div>
+</div>
+<div id="execution" class="section level2">
+<h2 class="hasAnchor">
+<a href="#execution" class="anchor"></a>Execution</h2>
+<p>A complete instance of instantiation involves 3 steps:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span class="va">conn</span> <span class="op">&lt;-</span> <span class="fu">pg13</span><span class="fu">::</span><span class="fu"><a href="https://meerapatelmd.github.io/pg13/reference/local_connect.html">local_connect</a></span><span class="op">(</span><span class="op">)</span>
+
+<span class="co"># 1. Load NCI Metathesaurus  </span>
+<span class="fu"><a href="reference/load_ncim.html">load_ncim</a></span><span class="op">(</span>conn <span class="op">=</span> <span class="va">conn</span>, 
+          path_to_rrfs <span class="op">=</span> <span class="st">"~/Desktop/Metathesaurus.RRF/META"</span>,
+          ncim_version <span class="op">=</span> <span class="st">"202008"</span><span class="op">)</span>
+
+<span class="co"># 2. Load NCI Thesaurus  </span>
+<span class="fu"><a href="reference/load_ncit.html">load_ncit</a></span><span class="op">(</span>conn <span class="op">=</span> <span class="va">conn</span><span class="op">)</span>
+
+<span class="co"># 3. Load Code to CUI Map  </span>
+<span class="fu"><a href="reference/load_code_cui_map.html">load_code_cui_map</a></span><span class="op">(</span>conn <span class="op">=</span> <span class="va">conn</span><span class="op">)</span>  </code></pre></div>
 </div>
 <div id="code-of-conduct" class="section level2">
 <h2 class="hasAnchor">
