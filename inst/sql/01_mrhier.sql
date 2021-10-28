@@ -777,11 +777,11 @@ CREATE TABLE nci_mrhier.lookup_ext AS (
   SELECT
   	*,
   	SUBSTRING(CONCAT('ext_', hierarchy_table), 1, 60) AS extended_table
-  FROM nci_mrhier.tmp_lookup
+  FROM nci_mrhier.lookup_parse
 );
 
-DROP TABLE nci_mrhier.tmp_lookup;
 
+SELECT * FROM nci_mrhier.lookup_ext;
 
 DO
 $$
@@ -803,8 +803,8 @@ BEGIN
 	SELECT get_nci_mth_version()
 	INTO mth_version;
 
-	SELECT COUNT(*) INTO total_iterations FROM nci_mrhier.lookup_ext;
-    FOR f IN SELECT ROW_NUMBER() OVER() AS iteration, l.* FROM nci_mrhier.lookup_ext l
+	SELECT COUNT(*) INTO total_iterations FROM nci_mrhier.lookup_ext WHERE diff_with_umls = TRUE;
+    FOR f IN SELECT ROW_NUMBER() OVER() AS iteration, l.* FROM nci_mrhier.lookup_ext l WHERE l.diff_with_umls = TRUE
     LOOP
 		iteration    := f.iteration;
 		source_table := f.hierarchy_table;
@@ -993,8 +993,8 @@ BEGIN
 	SELECT get_nci_mth_version()
 	INTO mth_version;
 
-	SELECT COUNT(*) INTO total_iterations FROM nci_mrhier.lookup WHERE hierarchy_sab <> 'SRC';
-    FOR f IN SELECT ROW_NUMBER() OVER() AS iteration, l.* FROM nci_mrhier.lookup l WHERE l.hierarchy_sab <> 'SRC'
+	SELECT COUNT(*) INTO total_iterations FROM nci_mrhier.lookup WHERE hierarchy_sab <> 'SRC' AND diff_with_umls = TRUE;
+    FOR f IN SELECT ROW_NUMBER() OVER() AS iteration, l.* FROM nci_mrhier.lookup l WHERE l.hierarchy_sab <> 'SRC' AND diff_with_umls = TRUE
     LOOP
 		iteration    := f.iteration;
 		source_table := f.extended_table;
@@ -1235,7 +1235,6 @@ $$
 ;
 
 
-SELECT * FROM nci_mrhier.pivot_snomedct_us_organism;
 
 SELECT * FROM public.process_nci_mrhier_log;
 
@@ -1246,6 +1245,9 @@ CREATE TABLE nci_mrhier.ext_lookup (
   extended_table varchar(255),
   max_ptr_level int
 );
+
+
+SELECT * FROM nci_mrhier.lookup;
 
 do
 $$
@@ -1265,21 +1267,10 @@ declare
 	log_mth_release_dt timestamp;
 begin
 	log_datetime := date_trunc('second', timeofday()::timestamp);
-	SELECT sm_version
-	INTO log_mth_version
-	FROM public.setup_mth_log
-	WHERE sm_datetime IN
-	  (SELECT MAX(sm_datetime) FROM public.setup_mth_log);
-
-	SELECT sm_release_date
-	INTO log_mth_release_dt
-	FROM public.setup_mth_log
-	WHERE sm_datetime IN
-	  (SELECT MAX(sm_datetime) FROM public.setup_mth_log);
 
 
-  	SELECT COUNT(*) INTO total_iterations FROM nci_mrhier.lookup;
-  	for f in select ROW_NUMBER() OVER() AS iteration, pl.* from nci_mrhier.lookup pl
+  	SELECT COUNT(*) INTO total_iterations FROM nci_mrhier.lookup WHERE diff_with_umls = TRUE;
+  	for f in select ROW_NUMBER() OVER() AS iteration, pl.* from nci_mrhier.lookup pl WHERE pl.diff_with_umls = TRUE
  	LOOP
       iteration := f.iteration;
       e_tbl := f.extended_table;
@@ -1412,11 +1403,14 @@ WITH a AS (
 	SELECT m1.sab,m1.ptr_id, CASE WHEN m1.ptr IS NULL THEN TRUE ELSE FALSE END ptr_is_null
 	FROM nci_mrhier.mrhier m1
 	LEFT JOIN nci_mrhier.mrhier_str m2
-	ON m1.ptr_id = m2.ptr_id
+	ON m1.ptr_id = m2.ptr_id 
+	left join nci_mrhier.lookup l 
+	ON l.hierarchy_sab = m1.sab
 	WHERE
 	  m2.ptr_id IS NULL AND
 	  m1.sab IN (SELECT sab FROM nci_mrhier.lookup_eng) AND
-	  m1.sab <> 'SRC') -- 'SRC' concepts are basically the source vocabulary and have NULL `ptr` values
+	  m1.sab <> 'SRC' AND -- 'SRC' concepts are basically the source vocabulary and have NULL `ptr` values
+	  l.diff_with_umls = TRUE)
 
 SELECT a.sab, a.ptr_is_null, COUNT(*)
 FROM a
@@ -1430,11 +1424,14 @@ CREATE TABLE nci_mrhier.mrhier_str_excl AS (
 	FROM nci_mrhier.mrhier m1
 	LEFT JOIN nci_mrhier.mrhier_str m2
 	ON m1.ptr_id = m2.ptr_id
+	left join nci_mrhier.lookup l 
+	ON l.hierarchy_sab = m1.sab
 	WHERE
 	  m2.ptr_id IS NULL AND
 	  m1.ptr IS NOT NULL AND
 	  m1.sab IN (SELECT sab FROM nci_mrhier.lookup_eng) AND
-	  m1.sab <> 'SRC'
+	  m1.sab <> 'SRC' AND 
+	  l.diff_with_umls = TRUE
 	ORDER BY m1.sab DESC -- Arbitrarily in descending order to include SNOMEDCT_US first
 	)
 ;
