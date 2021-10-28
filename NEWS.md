@@ -1,7 +1,14 @@
 # setupNCI 1.1.0.9000  
 
-* MRHIER failed to copy due to unknown reasons. A `copy_mrhier()` 
-is added to copy using a crosstab.  
+* MRHIER fails to copy due to unknown reasons. The error 
+message is as follows:  
+```
+ERROR:  extra data after last expected column
+CONTEXT:  COPY mrhier, line 1234648: "C0220965|A0832257|1||PDQ||||||"
+```
+A `copy_mrhier()` is added to copy using a crosstab.  
+
+* MRHIER processing SQL script is added.  
 
 
 # setupNCI 1.1.0  

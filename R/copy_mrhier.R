@@ -3,7 +3,9 @@
 #'
 #' @description
 #' Due to perpetual errors, MRHIER is processed in a
-#' roundabout manner.
+#' roundabout manner. This is because some rows contain
+#' an extra unknown column. In the script, anything
+#' with an index of 11 or greater is removed.
 #'
 #' @seealso
 #'  \code{\link[pg13]{lsSchema}},\code{\link[pg13]{send}}
