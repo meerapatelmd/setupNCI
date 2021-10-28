@@ -242,6 +242,7 @@ the transfer of the MIRHIER table, it is copied to the
 each row number.
 **************************************************************************/
 
+
 DO
 $$
 DECLARE
@@ -249,7 +250,7 @@ DECLARE
 	start_timestamp timestamp;
 	stop_timestamp timestamp;
 	mth_version varchar;
-	mth_date varchar;
+	mth_date varchar := NULL;
 	source_rows bigint;
 	target_rows bigint;
 BEGIN
@@ -341,6 +342,7 @@ BEGIN
 			  mth_date,
 			  source_rows,
 			  target_rows);
+		COMMIT;
 	END IF;
 end;
 $$
@@ -366,7 +368,7 @@ DECLARE
 	start_timestamp timestamp;
 	stop_timestamp timestamp;
 	mth_version varchar;
-	mth_date varchar;
+	mth_date varchar := NULL;
 	source_rows bigint;
 	target_rows bigint;
 BEGIN
@@ -450,14 +452,14 @@ DECLARE
 	start_timestamp timestamp;
 	stop_timestamp timestamp;
 	mth_version varchar;
-	mth_date varchar;
+	mth_date varchar := NULL;
 	source_rows bigint;
 	target_rows bigint;
 BEGIN
 	SELECT get_nci_mth_version()
 	INTO mth_version;
 
-	SELECT check_if_requires_processing(mth_version, 'MRHIER', 'LOOKUP_PARSE')
+	SELECT check_if_requires_processing(mth_version, 'MRHIER', 'LOOKUP_PARSE0')
 	INTO requires_processing;
 
   	IF requires_processing THEN
@@ -465,11 +467,11 @@ BEGIN
   		INTO start_timestamp
   		;
 
-  		PERFORM notify_start('processing LOOKUP_PARSE');
+  		PERFORM notify_start('processing LOOKUP_PARSE0');
 
 
-		DROP TABLE IF EXISTS nci_mrhier.lookup_parse;
-		CREATE TABLE nci_mrhier.lookup_parse (
+		DROP TABLE IF EXISTS nci_mrhier.lookup_parse0;
+		CREATE TABLE nci_mrhier.lookup_parse0 (
 		    hierarchy_sab character varying(40),
 		    hierarchy_table text,
 		    count bigint
@@ -488,13 +490,13 @@ BEGIN
 			  ORDER BY COUNT(*)
 		)
 
-		INSERT INTO nci_mrhier.lookup_parse
+		INSERT INTO nci_mrhier.lookup_parse0
 		SELECT *
 		FROM df
 		ORDER BY count -- ordered so that when writing tables later on, can see that the script is working fine over multiple small tables at first
 		;
 
-		PERFORM notify_completion('processing LOOKUP_PARSE');
+		PERFORM notify_completion('processing LOOKUP_PARSE0');
 
 		SELECT get_log_timestamp()
 		INTO stop_timestamp
@@ -509,7 +511,7 @@ BEGIN
 		INTO source_rows
 		;
 
-		SELECT get_row_count('nci_mrhier.lookup_parse')
+		SELECT get_row_count('nci_mrhier.lookup_parse0')
 		INTO target_rows
 		;
 
@@ -525,7 +527,7 @@ BEGIN
 			  NULL,
 			  ''nci_mrhier'',
 			  ''MRHIER'',
-			  ''LOOKUP_PARSE'',
+			  ''LOOKUP_PARSE0'',
 			  ''%s'',
 			  ''%s'');
 			',
@@ -551,15 +553,36 @@ the decimal-separated `ptr` string is parsed along with its
 ordinality as `ptr_level`. The parsed individual `ptr_aui`
 is joined to MRCONSO to add the `ptr_code` and `ptr_str`.
 -----------------------------------------------------------*/
+DROP TABLE IF EXISTS nci_mrhier.lookup_parse;
+create table nci_mrhier.lookup_parse AS (
+SELECT 
+ n.hierarchy_sab,
+ n.hierarchy_table,
+ n.count,
+ u.hierarchy_sab AS umls_hierarchy_sab, 
+ u.count AS umls_count, 
+ CASE 
+ 	WHEN u.hierarchy_sab IS NULL AND u.count IS NULL THEN TRUE 
+ 	WHEN u.count <> n.count THEN TRUE 
+ 	ELSE FALSE END diff_with_umls
+FROM nci_mrhier.lookup_parse0 n
+left join umls_mrhier.lookup_parse u 
+ON n.hierarchy_sab = u.hierarchy_sab
+);
+
+select * 
+from nci_mrhier.lookup_parse 
+where diff_with_umls = TRUE;
 
 DO
 $$
 DECLARE
 	requires_processing boolean;
+	diff_with_umls boolean;
 	start_timestamp timestamp;
 	stop_timestamp timestamp;
 	mth_version varchar;
-	mth_date varchar;
+	mth_date varchar := NULL;
 	source_rows bigint;
 	target_rows bigint;
     f record;
@@ -571,17 +594,18 @@ BEGIN
 	SELECT get_nci_mth_version()
 	INTO mth_version;
 
-	SELECT COUNT(*) INTO total_iterations FROM nci_mrhier.lookup;
-    FOR f IN SELECT ROW_NUMBER() OVER() AS iteration, l.* FROM nci_mrhier.lookup l
+	SELECT COUNT(*) INTO total_iterations FROM nci_mrhier.lookup_parse;
+    FOR f IN SELECT ROW_NUMBER() OVER() AS iteration, l.* FROM nci_mrhier.lookup_parse l
     LOOP
 		iteration := f.iteration;
 		target_table := f.hierarchy_table;
 		source_sab := f.hierarchy_sab;
+		diff_with_umls := f.diff_with_umls;
 
 		SELECT check_if_requires_processing(mth_version, 'MRHIER', target_table)
 		INTO requires_processing;
 
-  		IF requires_processing THEN
+  		IF requires_processing AND diff_with_umls THEN
 
    			PERFORM notify_start(CONCAT('processing', ' ', source_sab, ' into table ', target_table));
   			SELECT get_log_timestamp()
@@ -730,8 +754,8 @@ BEGIN
 			  target_table,
 			  source_rows,
 			  target_rows);
-		COMMIT;
 	END IF;
+			COMMIT;
 	END LOOP;
 end;
 $$
@@ -752,7 +776,7 @@ DECLARE
 	start_timestamp timestamp;
 	stop_timestamp timestamp;
 	mth_version varchar;
-	mth_date varchar;
+	mth_date varchar := NULL;
 	source_rows bigint;
 	target_rows bigint;
 BEGIN
@@ -854,7 +878,7 @@ DECLARE
 	start_timestamp timestamp;
 	stop_timestamp timestamp;
 	mth_version varchar;
-	mth_date varchar;
+	mth_date varchar := NULL;
 	source_rows bigint;
 	target_rows bigint;
     f record;
@@ -1019,7 +1043,7 @@ DECLARE
 	start_timestamp timestamp;
 	stop_timestamp timestamp;
 	mth_version varchar;
-	mth_date varchar;
+	mth_date varchar := NULL;
 	source_rows bigint;
 	target_rows bigint;
     f record;
@@ -1207,7 +1231,7 @@ DECLARE
 	start_timestamp timestamp;
 	stop_timestamp timestamp;
 	mth_version varchar;
-	mth_date varchar;
+	mth_date varchar := NULL;
 	max_level int;
 	source_rows bigint;
 	target_rows bigint;
@@ -1350,7 +1374,7 @@ DECLARE
 	start_timestamp timestamp;
 	stop_timestamp timestamp;
 	mth_version varchar;
-	mth_date varchar;
+	mth_date varchar := NULL;
 	source_rows bigint;
 	target_rows bigint;
     f record;
