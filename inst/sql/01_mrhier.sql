@@ -2,7 +2,10 @@
 * Derive entire hierarchies from NCI Metathesaurus MRHIER Table
 * Authors: Meera Patel
 * Date: 2021-10-27
-*
+* Prerequisites: UMLS Metathesaurus MRHIER is already parsed. The lookup 
+* tables from this is used to only process NCI MRHIER vocabularies that 
+* have a diff count with UMLS classifications.
+* 
 *
 * | MRHIER | --> | MRHIER | --> | MRHIER_STR | + | MRHIER_STR_EXCL |
 *
@@ -12,7 +15,7 @@
 * It is added as an identifier for each unique AUI-RELA-PTR (ptr: Path To Root).
 * Note that unlike the identifiers provided
 * by the NCI, this one cannot be used across different Metathesaurus
-* versions.
+* versions. 
 *
 * | MRHIER | --> | MRHIER_STR | + | MRHIER_STR_EXCL |
 * MRHIER is then processed to replace the decimal-separated `ptr` string into
