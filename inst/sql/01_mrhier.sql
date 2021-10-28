@@ -76,6 +76,7 @@ begin
 END;
 $$;
 
+
 create or replace function get_nci_mth_version()
 returns varchar
 language plpgsql
@@ -84,32 +85,19 @@ $$
 declare
 	nci_mth_version varchar;
 begin
-	SELECT sm_version
+	WITH mth AS (
+		SELECT * 
+		FROM public.setup_nci_log 
+		WHERE nci_type = 'Metathesaurus'
+	)
+	SELECT nci_version
 	INTO nci_mth_version
-	FROM public.setup_mth_log
-	WHERE sm_datetime IN (SELECT MAX(sm_datetime) FROM public.setup_mth_log);
+	FROM mth
+	WHERE sn_datetime IN (SELECT MAX(sn_datetime) FROM mth);
 
   	RETURN nci_mth_version;
 END;
 $$;
-
-create or replace function get_nci_mth_dt()
-returns varchar
-language plpgsql
-as
-$$
-declare
-	nci_mth_dt varchar;
-begin
-	SELECT sm_release_date
-	INTO nci_mth_dt
-	FROM public.setup_mth_log
-	WHERE sm_datetime IN (SELECT MAX(sm_datetime) FROM public.setup_mth_log);
-
-  	RETURN nci_mth_dt;
-END;
-$$;
-
 
 create or replace function get_row_count(_tbl varchar)
 returns bigint
@@ -133,6 +121,7 @@ $$;
 
 
 
+DROP FUNCTION check_if_requires_processing(character varying,character varying,character varying);
 create or replace function check_if_requires_processing(nci_mth_version varchar, source_table varchar, target_table varchar)
 returns boolean
 language plpgsql
@@ -288,8 +277,8 @@ BEGIN
 			  c.STR,
 			  m.RELA,
 			  m.PTR
-			 FROM mth.mrhier m
-			 INNER JOIN mth.mrconso c
+			 FROM nci.mrhier m
+			 INNER JOIN nci.mrconso c
 			 ON c.aui = m.aui
 		);
 
@@ -305,9 +294,9 @@ BEGIN
 		ADD CONSTRAINT xpk_mrhier
 		PRIMARY KEY (ptr_id);
 
-		CREATE INDEX x_mrhier_sab ON nci_mrhier.mrhier(sab);
-		CREATE INDEX x_mrhier_aui ON nci_mrhier.mrhier(aui);
-		CREATE INDEX x_mrhier_code ON nci_mrhier.mrhier(code);
+		CREATE INDEX x_nci_mrhier_sab ON nci_mrhier.mrhier(sab);
+		CREATE INDEX x_nci_mrhier_aui ON nci_mrhier.mrhier(aui);
+		CREATE INDEX x_nci_mrhier_code ON nci_mrhier.mrhier(code);
 
 		DROP TABLE nci_mrhier.tmp_mrhier;
 
@@ -321,11 +310,8 @@ BEGIN
 		INTO mth_version
 		;
 
-		SELECT get_nci_mth_dt()
-		INTO mth_date
-		;
 
-		SELECT get_row_count('mth.mrhier')
+		SELECT get_row_count('nci.mrhier')
 		INTO source_rows
 		;
 
@@ -405,7 +391,7 @@ BEGIN
 
 		INSERT INTO nci_mrhier.lookup_eng
 		SELECT DISTINCT sab
-		FROM mth.mrconso
+		FROM nci.mrconso
 		WHERE lat = 'ENG' ORDER BY sab;
 
 		PERFORM notify_completion('processing LOOKUP_ENG');
@@ -418,11 +404,9 @@ BEGIN
 		INTO mth_version
 		;
 
-		SELECT get_nci_mth_dt()
-		INTO mth_date
-		;
 
-		SELECT get_row_count('mth.mrconso')
+
+		SELECT get_row_count('nci.mrconso')
 		INTO source_rows
 		;
 
@@ -520,9 +504,6 @@ BEGIN
 		INTO mth_version
 		;
 
-		SELECT get_nci_mth_dt()
-		INTO mth_date
-		;
 
 		SELECT get_row_count('nci_mrhier.mrhier')
 		INTO source_rows
@@ -640,7 +621,7 @@ BEGIN
 			  WITH relatives0 AS (
 				SELECT DISTINCT m.ptr_id, s1.aui, s1.code, s1.str, m.rela, m.ptr
 				FROM nci_mrhier.mrhier m
-				INNER JOIN mth.mrconso s1
+				INNER JOIN nci.mrconso s1
 				ON s1.aui = m.aui
 				WHERE m.sab = ''%s''
 			  ),
@@ -656,7 +637,7 @@ BEGIN
 			  relatives3 AS (
 			  	SELECT r2.*, m.code AS ptr_code, m.str AS ptr_str
 			  	FROM relatives2 r2
-			  	LEFT JOIN mth.mrconso m
+			  	LEFT JOIN nci.mrconso m
 			  	ON m.aui = r2.ptr_aui
 			  )
 
@@ -718,10 +699,6 @@ BEGIN
 
 		SELECT get_nci_mth_version()
 		INTO mth_version
-		;
-
-		SELECT get_nci_mth_dt()
-		INTO mth_date
 		;
 
 
@@ -828,10 +805,6 @@ BEGIN
 
 		SELECT get_nci_mth_version()
 		INTO mth_version
-		;
-
-		SELECT get_nci_mth_dt()
-		INTO mth_date
 		;
 
 		SELECT get_row_count('nci_mrhier.snomedct_us')
@@ -964,11 +937,6 @@ BEGIN
 			SELECT get_nci_mth_version()
 			INTO mth_version
 			;
-
-			SELECT get_nci_mth_dt()
-			INTO mth_date
-			;
-
 
 			EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', target_table)
 			INTO target_rows
@@ -1149,11 +1117,6 @@ BEGIN
 			SELECT get_nci_mth_version()
 			INTO mth_version
 			;
-
-			SELECT get_nci_mth_dt()
-			INTO mth_date
-			;
-
 
 			EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', target_table)
 			INTO target_rows
@@ -1347,11 +1310,6 @@ BEGIN
 		INTO mth_version
 		;
 
-		SELECT get_nci_mth_dt()
-		INTO mth_date
-		;
-
-
 		EXECUTE
 		  format(
 		    '
@@ -1464,9 +1422,6 @@ BEGIN
 		INTO mth_version
 		;
 
-		SELECT get_nci_mth_dt()
-		INTO mth_date
-		;
 
 		EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', target_table)
 		INTO target_rows;
@@ -1734,8 +1689,6 @@ BEGIN
 	SELECT get_nci_mth_version()
 	INTO mth_version;
 
-	SELECT get_nci_mth_dt()
-	INTO mth_release_dt;
 
 	EXECUTE
 	 format('
@@ -1845,18 +1798,18 @@ $$
 
 
 ALTER TABLE nci_class.mrhier_str
-ADD CONSTRAINT xpk_mrhier_str
+ADD CONSTRAINT xpk_nci_mrhier_str
 PRIMARY KEY (ptr_id);
 
-CREATE INDEX x_mrhier_str_aui ON nci_class.mrhier_str(aui);
-CREATE INDEX x_mrhier_str_code ON nci_class.mrhier_str(code);
+CREATE INDEX x_nci_mrhier_str_aui ON nci_class.mrhier_str(aui);
+CREATE INDEX x_nci_mrhier_str_code ON nci_class.mrhier_str(code);
 
 
 ALTER TABLE nci_class.mrhier_str_excl
-ADD CONSTRAINT xpk_mrhier_str_excl
+ADD CONSTRAINT xpk_nci_mrhier_str_excl
 PRIMARY KEY (ptr_id);
 
-CREATE INDEX x_mrhier_str_excl_aui ON nci_class.mrhier_str_excl(aui);
-CREATE INDEX x_mrhier_str_excl_code ON nci_class.mrhier_str_excl(code);
-CREATE INDEX x_mrhier_str_excl_sab ON nci_class.mrhier_str_excl(sab);
+CREATE INDEX x_nci_mrhier_str_excl_aui ON nci_class.mrhier_str_excl(aui);
+CREATE INDEX x_nci_mrhier_str_excl_code ON nci_class.mrhier_str_excl(code);
+CREATE INDEX x_nci_mrhier_str_excl_sab ON nci_class.mrhier_str_excl(sab);
 
