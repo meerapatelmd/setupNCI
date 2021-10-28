@@ -1,3 +1,9 @@
+# setupNCI 1.1.0.9000  
+
+* MRHIER failed to copy due to unknown reasons. A `copy_mrhier()` 
+is added to copy using a crosstab.  
+
+
 # setupNCI 1.1.0  
 
 * Fixed load error by expanding limit for CUI fields to 

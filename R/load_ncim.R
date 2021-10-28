@@ -26,6 +26,7 @@ function(conn,
          steps = c("reset_schema",
                    "ddl_tables",
                    "copy_rrfs",
+                   "copy_mrhier",
                    "add_indexes",
                    "log"),
          log_schema = "public",
@@ -138,6 +139,16 @@ function(conn,
               schema = schema,
               verbose = verbose,
               render_sql = render_sql)
+  }
+
+  if ("copy_mrhier" %in% steps) {
+
+    copy_mrhier(path_to_rrfs = path_to_rrfs,
+                conn = conn,
+                schema = schema,
+                verbose = verbose,
+                render_sql = render_sql)
+
   }
 
 
