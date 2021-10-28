@@ -52,13 +52,13 @@ CREATE TABLE IF NOT EXISTS public.process_nci_mrhier_log (
 
 
 CREATE TABLE IF NOT EXISTS public.setup_nci_class_log (
-    suc_datetime timestamp without time zone,
+    snc_datetime timestamp without time zone,
     mth_version character varying(255),
     mth_release_dt character varying(255),
     target_schema character varying(255),
-    mrhier bigint,
-    mrhier_str bigint,
-    mrhier_str_excl bigint
+    nci_mrhier bigint,
+    nci_mrhier_str bigint,
+    nci_mrhier_str_excl bigint
 );
 
 /**************************************************************************
@@ -1443,12 +1443,14 @@ CREATE TABLE nci_mrhier.mrhier_str_excl AS (
 SELECT *
 FROM public.setup_nci_class_log;
 
+
+
 DO
 $$
 DECLARE
 	log_timestamp timestamp;
 	mth_version varchar;
-	mth_release_dt varchar;
+	mth_release_dt varchar := NULL;
 	target_schema varchar := 'nci_class';
 BEGIN
 	SELECT get_log_timestamp()
@@ -1460,7 +1462,7 @@ BEGIN
 
 	EXECUTE
 	 format('
-	 INSERT INTO public.setup_nci_class_log(suc_datetime, mth_version, mth_release_dt, target_schema)
+	 INSERT INTO public.setup_nci_class_log(snc_datetime, mth_version, mth_release_dt, target_schema)
 	 VALUES (''%s'', ''%s'', ''%s'', ''%s'')
 	 ;
 	 ',
@@ -1474,8 +1476,8 @@ $$
 ;
 
 
-DROP TABLE IF EXISTS nci_class.mrhier;
-CREATE TABLE nci_class.mrhier AS (
+DROP TABLE IF EXISTS nci_class.nci_mrhier;
+CREATE TABLE nci_class.nci_mrhier AS (
 SELECT *
 FROM nci_mrhier.mrhier
 )
@@ -1488,14 +1490,14 @@ DECLARE
 BEGIN
   SELECT COUNT(*)
   INTO mrhier_rows
-  FROM nci_class.mrhier;
+  FROM nci_class.nci_mrhier;
 
   EXECUTE
     format(
     '
     UPDATE public.setup_nci_class_log
-    SET mrhier = %s
-    WHERE suc_datetime IN (SELECT MAX(suc_datetime) FROM public.setup_nci_class_log);
+    SET nci_mrhier = %s
+    WHERE snc_datetime IN (SELECT MAX(snc_datetime) FROM public.setup_nci_class_log);
     ',
     mrhier_rows
     )
@@ -1504,8 +1506,8 @@ END;
 $$
 ;
 
-DROP TABLE IF EXISTS nci_class.mrhier_str;
-CREATE TABLE nci_class.mrhier_str AS (
+DROP TABLE IF EXISTS nci_class.nci_mrhier_str;
+CREATE TABLE nci_class.nci_mrhier_str AS (
 SELECT *
 FROM nci_mrhier.mrhier_str
 )
@@ -1518,14 +1520,14 @@ DECLARE
 BEGIN
   SELECT COUNT(*)
   INTO mrhier_str_rows
-  FROM nci_class.mrhier_str;
+  FROM nci_class.nci_mrhier_str;
 
   EXECUTE
     format(
     '
     UPDATE public.setup_nci_class_log
-    SET mrhier_str = %s
-    WHERE suc_datetime IN (SELECT MAX(suc_datetime) FROM public.setup_nci_class_log);
+    SET nci_mrhier_str = %s
+    WHERE snc_datetime IN (SELECT MAX(snc_datetime) FROM public.setup_nci_class_log);
     ',
     mrhier_str_rows
     )
@@ -1534,8 +1536,8 @@ END;
 $$
 ;
 
-DROP TABLE IF EXISTS nci_class.mrhier_str_excl;
-CREATE TABLE nci_class.mrhier_str_excl AS (
+DROP TABLE IF EXISTS nci_class.nci_mrhier_str_excl;
+CREATE TABLE nci_class.nci_mrhier_str_excl AS (
 SELECT *
 FROM nci_mrhier.mrhier_str_excl
 )
@@ -1548,14 +1550,14 @@ DECLARE
 BEGIN
   SELECT COUNT(*)
   INTO mrhier_str_excl_rows
-  FROM nci_class.mrhier_str_excl;
+  FROM nci_class.nci_mrhier_str_excl;
 
   EXECUTE
     format(
     '
     UPDATE public.setup_nci_class_log
-    SET mrhier_str_excl = %s
-    WHERE suc_datetime IN (SELECT MAX(suc_datetime) FROM public.setup_nci_class_log);
+    SET nci_mrhier_str_excl = %s
+    WHERE snc_datetime IN (SELECT MAX(snc_datetime) FROM public.setup_nci_class_log);
     ',
     mrhier_str_excl_rows
     )
@@ -1565,19 +1567,19 @@ $$
 ;
 
 
-ALTER TABLE nci_class.mrhier_str
+ALTER TABLE nci_class.nci_mrhier_str
 ADD CONSTRAINT xpk_nci_mrhier_str
 PRIMARY KEY (ptr_id);
 
-CREATE INDEX x_nci_mrhier_str_aui ON nci_class.mrhier_str(aui);
-CREATE INDEX x_nci_mrhier_str_code ON nci_class.mrhier_str(code);
+CREATE INDEX x_nci_mrhier_str_aui ON nci_class.nci_mrhier_str(aui);
+CREATE INDEX x_nci_mrhier_str_code ON nci_class.nci_mrhier_str(code);
 
 
-ALTER TABLE nci_class.mrhier_str_excl
+ALTER TABLE nci_class.nci_mrhier_str_excl
 ADD CONSTRAINT xpk_nci_mrhier_str_excl
 PRIMARY KEY (ptr_id);
 
-CREATE INDEX x_nci_mrhier_str_excl_aui ON nci_class.mrhier_str_excl(aui);
-CREATE INDEX x_nci_mrhier_str_excl_code ON nci_class.mrhier_str_excl(code);
-CREATE INDEX x_nci_mrhier_str_excl_sab ON nci_class.mrhier_str_excl(sab);
+CREATE INDEX x_nci_mrhier_str_excl_aui ON nci_class.nci_mrhier_str_excl(aui);
+CREATE INDEX x_nci_mrhier_str_excl_code ON nci_class.nci_mrhier_str_excl(code);
+CREATE INDEX x_nci_mrhier_str_excl_sab ON nci_class.nci_mrhier_str_excl(sab);
 
