@@ -71,7 +71,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">setupNCI</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">1.1.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">1.1.0.9000</span>
       </span>
     </div>
 
@@ -114,18 +114,32 @@
       <small>Source: <a href='https://github.com/meerapatelmd/setupNCI/blob/master/NEWS.md'><code>NEWS.md</code></a></small>
     </div>
 
-    <div id="setupnci-1-1-0" class="section level1">
+    <div id="setupnci-1109000" class="section level1">
+<h1 class="page-header" data-toc-text="1.1.0.9000">
+<a href="#setupnci-1109000" class="anchor"></a>setupNCI 1.1.0.9000</h1>
+<ul>
+<li>MRHIER fails to copy due to unknown reasons. The error message is as follows:<br>
+</li>
+</ul>
+<pre><code>ERROR:  extra data after last expected column
+CONTEXT:  COPY mrhier, line 1234648: "C0220965|A0832257|1||PDQ||||||"</code></pre>
+<p>A <code><a href="../reference/copy_mrhier.html">copy_mrhier()</a></code> is added that loads into a single field in a <code>RAW_MRHIER</code> table and transformed into the final <code>MRHIER</code> table using crosstab. A QA report gives a comparison of the row counts, first and last lines between the two tables.</p>
+<ul>
+<li>MRHIER processing SQL script is added.</li>
+</ul>
+</div>
+    <div id="setupnci-110" class="section level1">
 <h1 class="page-header" data-toc-text="1.1.0">
-<a href="#setupnci-1-1-0" class="anchor"></a>setupNCI 1.1.0</h1>
+<a href="#setupnci-110" class="anchor"></a>setupNCI 1.1.0</h1>
 <ul>
 <li>Fixed load error by expanding limit for CUI fields to 10 characters because some NCI CUIs are prefixed with <code>CL</code>.<br>
 </li>
 <li>To prevent losing an existing <code>Thesaurus</code> and/or <code>Code To CUI Map</code> table/s, changed drop cascade of the target schema to dropping only NCI Metathesaurus tables.</li>
 </ul>
 </div>
-    <div id="setupnci-0-1-0" class="section level1">
+    <div id="setupnci-010" class="section level1">
 <h1 class="page-header" data-toc-text="0.1.0">
-<a href="#setupnci-0-1-0" class="anchor"></a>setupNCI 0.1.0</h1>
+<a href="#setupnci-010" class="anchor"></a>setupNCI 0.1.0</h1>
 <ul>
 <li>Added first version</li>
 </ul>
