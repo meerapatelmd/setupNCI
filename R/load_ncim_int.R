@@ -90,7 +90,8 @@ reset_schema <-
                    "CREATE SCHEMA @schema;",
                    schema = schema),
                verbose = verbose,
-               render_sql = render_sql)
+               render_sql = render_sql,
+               checks = "")
     }
   }
 
@@ -719,7 +720,8 @@ ddl_tables <-
       pg13::send(conn = conn,
                  sql_statement = SqlRender::render(ddl[[i]], schema = schema),
                  verbose = verbose,
-                 render_sql = render_sql)
+                 render_sql = render_sql,
+                 checks = "")
     }
   }
 

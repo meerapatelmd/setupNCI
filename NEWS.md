@@ -6,7 +6,10 @@ message is as follows:
 ERROR:  extra data after last expected column
 CONTEXT:  COPY mrhier, line 1234648: "C0220965|A0832257|1||PDQ||||||"
 ```
-A `copy_mrhier()` is added to copy using a crosstab.  
+A `copy_mrhier()` is added that loads into a single field in a 
+`RAW_MRHIER` table and transformed into the final `MRHIER` 
+table using crosstab. A QA report gives a comparison of the 
+row counts, first and last lines between the two tables.  
 
 * MRHIER processing SQL script is added.  
 

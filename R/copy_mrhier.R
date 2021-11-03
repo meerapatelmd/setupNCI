@@ -29,12 +29,17 @@ copy_mrhier <-
     sql_statement <-
       glue::glue(
       "
-      DROP TABLE IF EXISTS {schema}.raw_mrhier0;
-      CREATE TABLE {schema}.raw_mrhier0 (
+      DROP TABLE IF EXISTS {schema}.raw_mrhier;
+      CREATE TABLE {schema}.raw_mrhier (
           SOURCE text NOT NULL
       );
 
-      COPY {schema}.raw_mrhier0 FROM '{mrhier_path}';
+      COPY {schema}.raw_mrhier FROM '{mrhier_path}';
+
+      DROP TABLE IF EXISTS {schema}.raw_mrhier0;
+      CREATE TABLE {schema}.raw_mrhier0 AS (
+        SELECT * FROM {schema}.raw_mrhier;
+      )
 
       DROP TABLE IF EXISTS {schema}.raw_mrhier1;
       CREATE TABLE {schema}.raw_mrhier1 AS (
@@ -65,14 +70,6 @@ copy_mrhier <-
       FROM {schema}.raw_mrhier2 m
       ORDER BY row_id
       );
-
-
-      SELECT *
-      FROM {schema}.raw_mrhier3 m
-      WHERE col_index = 11
-      ;
-
-
 
       DROP TABLE IF EXISTS {schema}.raw_mrhier4;
       CREATE TABLE {schema}.raw_mrhier4 AS (
@@ -108,7 +105,66 @@ copy_mrhier <-
     pg13::send(conn = conn,
                sql_statement = sql_statement,
                verbose = verbose,
-               render_sql = render_sql)
+               render_sql = render_sql,
+               checks = "")
+
+
+    # Reporting to make sure that the first and last lines are the same
+    raw_rows <-
+      pg13::query(conn = conn,
+                  sql_statement = glue::glue("SELECT COUNT(*) FROM {schema}.raw_mrhier;"),
+                  verbose = verbose,
+                  render_sql = render_sql,
+                  checks = "")
+    final_rows <-
+      pg13::query(conn = conn,
+                  sql_statement = glue::glue("SELECT COUNT(*) FROM {schema}.mrhier;"),
+                  verbose = verbose,
+                  render_sql = render_sql,
+                  checks = "")
+
+    secretary::typewrite("RAW_MRHIER Rows:", raw_rows$count)
+    secretary::typewrite("MRHIER Rows:", final_rows$count)
+
+
+    raw_line1 <-
+      pg13::query(conn = conn,
+                  sql_statement = glue::glue("SELECT * FROM {schema}.raw_mrhier LIMIT 1;"),
+                  verbose = verbose,
+                  render_sql = render_sql,
+                  checks = "")
+
+    final_line1 <-
+      pg13::query(conn = conn,
+                  sql_statement = glue::glue("SELECT * FROM {schema}.mrhier LIMIT 1;"),
+                  verbose = verbose,
+                  render_sql = render_sql,
+                  checks = "")
+
+    secretary::typewrite("RAW_MRHIER First Line:")
+    huxtable::print_screen(raw_line1)
+    secretary::typewrite("MRHIER First Line:")
+    huxtable::print_screen(final_line1)
+
+    raw_line_n <-
+      pg13::query(conn = conn,
+                  sql_statement = glue::glue("SELECT * FROM {schema}.raw_mrhier OFFSET (SELECT count(*) FROM {schema}.raw_mrhier)-1;"),
+                  verbose = verbose,
+                  render_sql = render_sql,
+                  checks = "")
+
+    final_line_n <-
+      pg13::query(conn = conn,
+                  sql_statement = glue::glue("SELECT * FROM {schema}.mrhier OFFSET (SELECT count(*) FROM {schema}.mrhier)-1;"),
+                  verbose = verbose,
+                  render_sql = render_sql,
+                  checks = "")
+
+    secretary::typewrite("RAW_MRHIER Last Line:")
+    huxtable::print_screen(raw_line_n)
+    secretary::typewrite("MRHIER Last Line:")
+    huxtable::print_screen(final_line_n)
+
 
 
 
