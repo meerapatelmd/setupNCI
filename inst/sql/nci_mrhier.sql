@@ -312,12 +312,12 @@ BEGIN
 		;
 
 		ALTER TABLE nci_mrhier.mrhier
-		ADD CONSTRAINT xpk_mrhier
+		ADD CONSTRAINT xpk_nci_mrhier
 		PRIMARY KEY (ptr_id);
 
-		CREATE INDEX x_mrhier_sab ON nci_mrhier.mrhier(sab);
-		CREATE INDEX x_mrhier_aui ON nci_mrhier.mrhier(aui);
-		CREATE INDEX x_mrhier_code ON nci_mrhier.mrhier(code);
+		CREATE INDEX x_nci_mrhier_sab ON nci_mrhier.mrhier(sab);
+		CREATE INDEX x_nci_mrhier_aui ON nci_mrhier.mrhier(aui);
+		CREATE INDEX x_nci_mrhier_code ON nci_mrhier.mrhier(code);
 
 		DROP TABLE nci_mrhier.tmp_mrhier;
 		
