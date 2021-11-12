@@ -1,5 +1,5 @@
 /**************************************************************************
-* Derive entire hierarchies from UMLS Metathesaurus MRHIER Table
+* Derive entire hierarchies from NCI Metathesaurus MRHIER Table
 * Authors: Meera Patel
 * Date: 2021-10-27
 * https://lucid.app/lucidchart/b7e40e42-ea80-43be-baf5-7f92cbfb6d6f/edit?viewport_loc=-185%2C997%2C1560%2C929%2C0_0&invitationId=inv_61a38c21-37a1-49fa-a857-d7585471e5f1
@@ -8,7 +8,7 @@
 * ptr_id is added to the source table. ptr_id is the source MRHIER's row number.
 * It is added as an identifier for each unique AUI-RELA-PTR (ptr: Path To Root).
 * Note that unlike the identifiers provided
-* by the UMLS, this one cannot be used across different Metathesaurus
+* by the NCI, this one cannot be used across different Metathesaurus
 * versions.
 *
 * | MRHIER | --> | MRHIER_STR | + | MRHIER_STR_EXCL |
@@ -25,10 +25,10 @@
 *     to the MRCONSO table at this stage
 * [X] Some log entries do not have target table row counts
 * [ ] Log entries from `ext_` to `pivot_` do not have `sab` value
-* [X] Re-imagine the RxClass log so that it is a 1-row entry per incidence (mimic setup_umls_class_log)
+* [X] Re-imagine the RxClass log so that it is a 1-row entry per incidence (mimic setup_nci_class_log)
 * [X] Change sort order of final tables in RxClass 
-* [ ] Change sort order of final tables in UMLS Class
-* [ ] Add indexes to final UMLS Class tables
+* [ ] Change sort order of final tables in NCI Class
+* [ ] Add indexes to final NCI Class tables
 * [X] Add indexes to final RxClass tables
 **************************************************************************/
 
@@ -41,7 +41,7 @@ Both are setup if it does not already exist.
 **************************************************************************/
 
 
-CREATE TABLE IF NOT EXISTS public.process_umls_mrhier_log (
+CREATE TABLE IF NOT EXISTS public.process_nci_mrhier_log (
     process_start_datetime timestamp without time zone,
     process_stop_datetime timestamp without time zone,
     mth_version character varying(255),
@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS public.process_umls_mrhier_log (
 );
 
 
-CREATE TABLE IF NOT EXISTS public.setup_umls_class_log (
+CREATE TABLE IF NOT EXISTS public.setup_nci_class_log (
     suc_datetime timestamp without time zone,
     mth_version character varying(255),
     mth_release_dt character varying(255),
@@ -84,37 +84,37 @@ begin
 END;
 $$;
 
-create or replace function get_umls_mth_version()
+create or replace function get_nci_mth_version()
 returns varchar
 language plpgsql
 as
 $$
 declare
-	umls_mth_version varchar;
+	nci_mth_version varchar;
 begin
 	SELECT sm_version
-	INTO umls_mth_version
+	INTO nci_mth_version
 	FROM public.setup_mth_log
 	WHERE sm_datetime IN (SELECT MAX(sm_datetime) FROM public.setup_mth_log);
 
-  	RETURN umls_mth_version;
+  	RETURN nci_mth_version;
 END;
 $$;
 
-create or replace function get_umls_mth_dt()
+create or replace function get_nci_mth_dt()
 returns varchar
 language plpgsql
 as
 $$
 declare
-	umls_mth_dt varchar;
+	nci_mth_dt varchar;
 begin
 	SELECT sm_release_date
-	INTO umls_mth_dt
+	INTO nci_mth_dt
 	FROM public.setup_mth_log
 	WHERE sm_datetime IN (SELECT MAX(sm_datetime) FROM public.setup_mth_log);
 
-  	RETURN umls_mth_dt;
+  	RETURN nci_mth_dt;
 END;
 $$;
 
@@ -141,7 +141,7 @@ $$;
 
 
 DROP FUNCTION check_if_requires_processing(character varying,character varying,character varying);
-create or replace function check_if_requires_processing(umls_mth_version varchar, source_table varchar, target_table varchar)
+create or replace function check_if_requires_processing(nci_mth_version varchar, source_table varchar, target_table varchar)
 returns boolean
 language plpgsql
 as
@@ -154,7 +154,7 @@ begin
 	  format(
 	    '
 		SELECT COUNT(*)
-		FROM public.process_umls_mrhier_log l
+		FROM public.process_nci_mrhier_log l
 		WHERE
 		  l.mth_version = ''%s'' AND
 		  l.source_table = ''%s'' AND
@@ -162,7 +162,7 @@ begin
 		  l.process_stop_datetime IS NOT NULL
 		  ;
 	    ',
-	    umls_mth_version,
+	    nci_mth_version,
 	    source_table,
 	    target_table
 	  )
@@ -258,10 +258,10 @@ $$
 
 
 /**************************************************************************
-/ I. Transfer MRHIER to `umls_mrhier` Schema 
+/ I. Transfer MRHIER to `nci_mrhier` Schema 
 / -------------------------------------------------------------------------
-/ If the current UMLS Metathesaurus version is not logged for
-/ the transfer of the MRHIER table, the `umls_mrhier` schema is dropped.
+/ If the current NCI Metathesaurus version is not logged for
+/ the transfer of the MRHIER table, the `nci_mrhier` schema is dropped.
 / The unique AUI-RELA-PTR from the MRHIER table in the `mth` schema 
 / is then copied to the along with the AUI's CODE, SAB and STR in the MRCONSO 
 / table. A `ptr_id` to serve as a unique identifier each row number, which 
@@ -279,7 +279,7 @@ DECLARE
 	source_rows bigint;
 	target_rows bigint;
 BEGIN
-	SELECT get_umls_mth_version()
+	SELECT get_nci_mth_version()
 	INTO mth_version;
 
 	SELECT check_if_requires_processing(mth_version, 'MRHIER', 'MRHIER')
@@ -287,8 +287,8 @@ BEGIN
 
   	IF requires_processing THEN
 
-  		DROP SCHEMA IF EXISTS umls_mrhier CASCADE;
-		CREATE SCHEMA umls_mrhier;
+  		DROP SCHEMA IF EXISTS nci_mrhier CASCADE;
+		CREATE SCHEMA nci_mrhier;
 		COMMIT;
 
   		SELECT get_log_timestamp()
@@ -298,8 +298,8 @@ BEGIN
   		PERFORM notify_start('processing MRHIER');
 
 
-		DROP TABLE IF EXISTS umls_mrhier.tmp_mrhier;
-		CREATE TABLE umls_mrhier.tmp_mrhier AS (
+		DROP TABLE IF EXISTS nci_mrhier.tmp_mrhier;
+		CREATE TABLE nci_mrhier.tmp_mrhier AS (
 			SELECT DISTINCT
 			  m.AUI,
 			  c.CODE,
@@ -313,22 +313,22 @@ BEGIN
 		);
 
 
-		DROP TABLE IF EXISTS umls_mrhier.mrhier;
-		CREATE TABLE umls_mrhier.mrhier AS (
+		DROP TABLE IF EXISTS nci_mrhier.mrhier;
+		CREATE TABLE nci_mrhier.mrhier AS (
 		   SELECT ROW_NUMBER() OVER() AS ptr_id, m.*
-		   FROM umls_mrhier.tmp_mrhier m
+		   FROM nci_mrhier.tmp_mrhier m
 		)
 		;
 
-		ALTER TABLE umls_mrhier.mrhier
+		ALTER TABLE nci_mrhier.mrhier
 		ADD CONSTRAINT xpk_mrhier
 		PRIMARY KEY (ptr_id);
 
-		CREATE INDEX x_mrhier_sab ON umls_mrhier.mrhier(sab);
-		CREATE INDEX x_mrhier_aui ON umls_mrhier.mrhier(aui);
-		CREATE INDEX x_mrhier_code ON umls_mrhier.mrhier(code);
+		CREATE INDEX x_mrhier_sab ON nci_mrhier.mrhier(sab);
+		CREATE INDEX x_mrhier_aui ON nci_mrhier.mrhier(aui);
+		CREATE INDEX x_mrhier_code ON nci_mrhier.mrhier(code);
 
-		DROP TABLE umls_mrhier.tmp_mrhier;
+		DROP TABLE nci_mrhier.tmp_mrhier;
 		
 		COMMIT;
 
@@ -338,11 +338,11 @@ BEGIN
 		INTO stop_timestamp
 		;
 
-		SELECT get_umls_mth_version()
+		SELECT get_nci_mth_version()
 		INTO mth_version
 		;
 
-		SELECT get_umls_mth_dt()
+		SELECT get_nci_mth_dt()
 		INTO mth_date
 		;
 
@@ -350,21 +350,21 @@ BEGIN
 		INTO source_rows
 		;
 
-		SELECT get_row_count('umls_mrhier.mrhier')
+		SELECT get_row_count('nci_mrhier.mrhier')
 		INTO target_rows
 		;
 
 		EXECUTE
 		  format(
 		    '
-			INSERT INTO public.process_umls_mrhier_log
+			INSERT INTO public.process_nci_mrhier_log
 			VALUES (
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  NULL,
-			  ''umls_mrhier'',
+			  ''nci_mrhier'',
 			  ''MRHIER'',
 			  ''MRHIER'',
 			  ''%s'',
@@ -405,7 +405,7 @@ DECLARE
 	source_rows bigint;
 	target_rows bigint;
 BEGIN
-	SELECT get_umls_mth_version()
+	SELECT get_nci_mth_version()
 	INTO mth_version;
 
 	SELECT check_if_requires_processing(mth_version, 'MRCONSO', 'LOOKUP_ENG')
@@ -419,12 +419,12 @@ BEGIN
 
   		PERFORM notify_start('processing LOOKUP_ENG');
 
-		DROP TABLE IF EXISTS umls_mrhier.lookup_eng;
-		CREATE TABLE umls_mrhier.lookup_eng (
+		DROP TABLE IF EXISTS nci_mrhier.lookup_eng;
+		CREATE TABLE nci_mrhier.lookup_eng (
 		    sab character varying(40)
 		);
 
-		INSERT INTO umls_mrhier.lookup_eng
+		INSERT INTO nci_mrhier.lookup_eng
 		SELECT DISTINCT sab
 		FROM mth.mrconso
 		WHERE lat = 'ENG' ORDER BY sab;
@@ -435,11 +435,11 @@ BEGIN
 		INTO stop_timestamp
 		;
 
-		SELECT get_umls_mth_version()
+		SELECT get_nci_mth_version()
 		INTO mth_version
 		;
 
-		SELECT get_umls_mth_dt()
+		SELECT get_nci_mth_dt()
 		INTO mth_date
 		;
 
@@ -447,21 +447,21 @@ BEGIN
 		INTO source_rows
 		;
 
-		SELECT get_row_count('umls_mrhier.lookup_eng')
+		SELECT get_row_count('nci_mrhier.lookup_eng')
 		INTO target_rows
 		;
 
 		EXECUTE
 		  format(
 		    '
-			INSERT INTO public.process_umls_mrhier_log
+			INSERT INTO public.process_nci_mrhier_log
 			VALUES (
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  NULL,
-			  ''umls_mrhier'',
+			  ''nci_mrhier'',
 			  ''MRCONSO'',
 			  ''LOOKUP_ENG'',
 			  ''%s'',
@@ -505,7 +505,7 @@ DECLARE
 	source_rows bigint;
 	target_rows bigint;
 BEGIN
-	SELECT get_umls_mth_version()
+	SELECT get_nci_mth_version()
 	INTO mth_version;
 
 	SELECT check_if_requires_processing(mth_version, 'MRHIER', 'LOOKUP_PARSE')
@@ -519,8 +519,8 @@ BEGIN
   		PERFORM notify_start('processing LOOKUP_PARSE');
 
 
-		DROP TABLE IF EXISTS umls_mrhier.lookup_parse;
-		CREATE TABLE umls_mrhier.lookup_parse (
+		DROP TABLE IF EXISTS nci_mrhier.lookup_parse;
+		CREATE TABLE nci_mrhier.lookup_parse (
 		    hierarchy_sab character varying(40),
 		    hierarchy_table text,
 		    count bigint
@@ -531,15 +531,15 @@ BEGIN
 			    h.sab AS hierarchy_sab,
 			    sab_to_tablename(h.sab) AS hierarchy_table,
 			    COUNT(*)
-			  FROM umls_mrhier.mrhier h
-			  INNER JOIN umls_mrhier.lookup_eng eng
+			  FROM nci_mrhier.mrhier h
+			  INNER JOIN nci_mrhier.lookup_eng eng
 			  ON eng.sab = h.sab
 			  GROUP BY h.sab
 			  HAVING COUNT(*) > 1
 			  ORDER BY COUNT(*)
 		)
 
-		INSERT INTO umls_mrhier.lookup_parse
+		INSERT INTO nci_mrhier.lookup_parse
 		SELECT *
 		FROM df
 		ORDER BY count -- ordered so that when writing tables later on, can see that the script is working fine over multiple small tables at first
@@ -554,33 +554,33 @@ BEGIN
 		INTO stop_timestamp
 		;
 
-		SELECT get_umls_mth_version()
+		SELECT get_nci_mth_version()
 		INTO mth_version
 		;
 
-		SELECT get_umls_mth_dt()
+		SELECT get_nci_mth_dt()
 		INTO mth_date
 		;
 
-		SELECT get_row_count('umls_mrhier.mrhier')
+		SELECT get_row_count('nci_mrhier.mrhier')
 		INTO source_rows
 		;
 
-		SELECT get_row_count('umls_mrhier.lookup_parse')
+		SELECT get_row_count('nci_mrhier.lookup_parse')
 		INTO target_rows
 		;
 
 		EXECUTE
 		  format(
 		    '
-			INSERT INTO public.process_umls_mrhier_log
+			INSERT INTO public.process_nci_mrhier_log
 			VALUES (
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  NULL,
-			  ''umls_mrhier'',
+			  ''nci_mrhier'',
 			  ''MRHIER'',
 			  ''LOOKUP_PARSE'',
 			  ''%s'',
@@ -635,11 +635,11 @@ DECLARE
 	iteration int;
     total_iterations int;
 BEGIN
-	SELECT get_umls_mth_version()
+	SELECT get_nci_mth_version()
 	INTO mth_version;
 
-	SELECT COUNT(*) INTO total_iterations FROM umls_mrhier.lookup_parse;
-    FOR f IN SELECT ROW_NUMBER() OVER() AS iteration, l.* FROM umls_mrhier.lookup_parse l
+	SELECT COUNT(*) INTO total_iterations FROM nci_mrhier.lookup_parse;
+    FOR f IN SELECT ROW_NUMBER() OVER() AS iteration, l.* FROM nci_mrhier.lookup_parse l
     LOOP
 		iteration := f.iteration;
 		target_table := f.hierarchy_table;
@@ -659,7 +659,7 @@ BEGIN
 			format(
 				'
 				SELECT COUNT(*)
-				FROM umls_mrhier.mrhier
+				FROM nci_mrhier.mrhier
 				WHERE sab = ''%s'';
 				',
 					source_sab
@@ -671,8 +671,8 @@ BEGIN
 			EXECUTE
 			format(
 			  '
-			  DROP TABLE IF EXISTS umls_mrhier.%s;
-			  CREATE TABLE  umls_mrhier.%s (
+			  DROP TABLE IF EXISTS nci_mrhier.%s;
+			  CREATE TABLE  nci_mrhier.%s (
 			    ptr_id INTEGER NOT NULL,
 			    ptr text NOT NULL,
 			  	aui varchar(12),
@@ -687,7 +687,7 @@ BEGIN
 
 			  WITH relatives0 AS (
 				SELECT DISTINCT m.ptr_id, s1.aui, s1.code, s1.str, m.rela, m.ptr
-				FROM umls_mrhier.mrhier m
+				FROM nci_mrhier.mrhier m
 				INNER JOIN mth.mrconso s1
 				ON s1.aui = m.aui
 				WHERE m.sab = ''%s''
@@ -708,7 +708,7 @@ BEGIN
 			  	ON m.aui = r2.ptr_aui
 			  )
 
-			  INSERT INTO umls_mrhier.%s
+			  INSERT INTO nci_mrhier.%s
 			  SELECT DISTINCT
 			    ptr_id,
 			    ptr,
@@ -725,14 +725,14 @@ BEGIN
 			  ;
 
 			  CREATE UNIQUE INDEX idx_%s_ptr
-			  ON umls_mrhier.%s (ptr_id, ptr_level);
-			  CLUSTER umls_mrhier.%s USING idx_%s_ptr;
+			  ON nci_mrhier.%s (ptr_id, ptr_level);
+			  CLUSTER nci_mrhier.%s USING idx_%s_ptr;
 
-			  CREATE INDEX x_%s_aui ON umls_mrhier.%s(aui);
-			  CREATE INDEX x_%s_code ON umls_mrhier.%s(code);
-			  CREATE INDEX x_%s_ptr_aui ON umls_mrhier.%s(ptr_aui);
-			  CREATE INDEX x_%s_ptr_code ON umls_mrhier.%s(ptr_code);
-			  CREATE INDEX x_%s_ptr_level ON umls_mrhier.%s(ptr_level);
+			  CREATE INDEX x_%s_aui ON nci_mrhier.%s(aui);
+			  CREATE INDEX x_%s_code ON nci_mrhier.%s(code);
+			  CREATE INDEX x_%s_ptr_aui ON nci_mrhier.%s(ptr_aui);
+			  CREATE INDEX x_%s_ptr_code ON nci_mrhier.%s(ptr_code);
+			  CREATE INDEX x_%s_ptr_level ON nci_mrhier.%s(ptr_level);
 			  ',
 			  	target_table,
 			  	target_table,
@@ -767,30 +767,30 @@ BEGIN
 		INTO stop_timestamp
 		;
 
-		SELECT get_umls_mth_version()
+		SELECT get_nci_mth_version()
 		INTO mth_version
 		;
 
-		SELECT get_umls_mth_dt()
+		SELECT get_nci_mth_dt()
 		INTO mth_date
 		;
 
 
-		EXECUTE format('SELECT COUNT(*) FROM umls_mrhier.%s;', target_table)
+		EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', target_table)
 		INTO target_rows
 		;
 
 		EXECUTE
 		  format(
 		    '
-			INSERT INTO public.process_umls_mrhier_log
+			INSERT INTO public.process_nci_mrhier_log
 			VALUES (
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
-			  ''umls_mrhier'',
+			  ''nci_mrhier'',
 			  ''MRHIER'',
 			  ''%s'',
 			  ''%s'',
@@ -834,7 +834,7 @@ DECLARE
 	source_rows bigint;
 	target_rows bigint;
 BEGIN
-	SELECT get_umls_mth_version()
+	SELECT get_nci_mth_version()
 	INTO mth_version;
 
 	SELECT check_if_requires_processing(mth_version, 'SNOMEDCT_US', 'LOOKUP_SNOMED')
@@ -848,8 +848,8 @@ BEGIN
 
   		PERFORM notify_start('processing LOOKUP_SNOMED');
 
-  		DROP TABLE IF EXISTS umls_mrhier.lookup_snomed;
-		CREATE TABLE umls_mrhier.lookup_snomed (
+  		DROP TABLE IF EXISTS nci_mrhier.lookup_snomed;
+		CREATE TABLE nci_mrhier.lookup_snomed (
 		    hierarchy_table text,
 		    root_aui varchar(12),
 		    root_code varchar(255),
@@ -858,7 +858,7 @@ BEGIN
 		    root_count bigint
 		);
 
-		INSERT INTO umls_mrhier.lookup_snomed
+		INSERT INTO nci_mrhier.lookup_snomed
 		SELECT
 			'SNOMEDCT_US' AS hierarchy_table,
 			ptr_aui AS root_aui,
@@ -871,7 +871,7 @@ BEGIN
 			  1,
 			  60) AS updated_hierarchy_table,
 			COUNT(*) AS root_count
-		FROM umls_mrhier.snomedct_us
+		FROM nci_mrhier.snomedct_us
 		WHERE ptr_level = 2
 		GROUP BY ptr_aui, ptr_code, ptr_str
 		ORDER BY COUNT(*)
@@ -881,33 +881,33 @@ BEGIN
 		INTO stop_timestamp
 		;
 
-		SELECT get_umls_mth_version()
+		SELECT get_nci_mth_version()
 		INTO mth_version
 		;
 
-		SELECT get_umls_mth_dt()
+		SELECT get_nci_mth_dt()
 		INTO mth_date
 		;
 
-		SELECT get_row_count('umls_mrhier.snomedct_us')
+		SELECT get_row_count('nci_mrhier.snomedct_us')
 		INTO source_rows
 		;
 
-		SELECT get_row_count('umls_mrhier.lookup_snomed')
+		SELECT get_row_count('nci_mrhier.lookup_snomed')
 		INTO target_rows
 		;
 
 		EXECUTE
 		  format(
 		    '
-			INSERT INTO public.process_umls_mrhier_log
+			INSERT INTO public.process_nci_mrhier_log
 			VALUES (
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  NULL,
-			  ''umls_mrhier'',
+			  ''nci_mrhier'',
 			  ''SNOMEDCT_US'',
 			  ''LOOKUP_SNOMED'',
 			  ''%s'',
@@ -951,11 +951,11 @@ DECLARE
 	iteration int;
     total_iterations int;
 BEGIN
-	SELECT get_umls_mth_version()
+	SELECT get_nci_mth_version()
 	INTO mth_version;
 
-	SELECT COUNT(*) INTO total_iterations FROM umls_mrhier.lookup_snomed;
-    FOR f IN SELECT ROW_NUMBER() OVER() AS iteration, l.* FROM umls_mrhier.lookup_snomed l
+	SELECT COUNT(*) INTO total_iterations FROM nci_mrhier.lookup_snomed;
+    FOR f IN SELECT ROW_NUMBER() OVER() AS iteration, l.* FROM nci_mrhier.lookup_snomed l
     LOOP
 		iteration    := f.iteration;
 		target_table := f.updated_hierarchy_table;
@@ -979,8 +979,8 @@ BEGIN
 			EXECUTE
 			format(
 			  '
-			  DROP TABLE IF EXISTS umls_mrhier.%s;
-			  CREATE TABLE umls_mrhier.%s (
+			  DROP TABLE IF EXISTS nci_mrhier.%s;
+			  CREATE TABLE nci_mrhier.%s (
 			  	ptr_id BIGINT NOT NULL,
 			  	ptr text NOT NULL,
 			  	aui VARCHAR(12) NOT NULL,
@@ -994,12 +994,12 @@ BEGIN
 			  )
 			  ;
 
-			  INSERT INTO umls_mrhier.%s
+			  INSERT INTO nci_mrhier.%s
 			  	SELECT *
-			  	FROM umls_mrhier.snomedct_us
+			  	FROM nci_mrhier.snomedct_us
 			  	WHERE ptr_id IN (
 			  		SELECT DISTINCT ptr_id
-			  		FROM umls_mrhier.snomedct_us
+			  		FROM nci_mrhier.snomedct_us
 			  		WHERE
 			  			ptr_level = 2
 			  			AND ptr_aui = ''%s''
@@ -1022,30 +1022,30 @@ BEGIN
 			INTO stop_timestamp
 			;
 
-			SELECT get_umls_mth_version()
+			SELECT get_nci_mth_version()
 			INTO mth_version
 			;
 
-			SELECT get_umls_mth_dt()
+			SELECT get_nci_mth_dt()
 			INTO mth_date
 			;
 
 
-			EXECUTE format('SELECT COUNT(*) FROM umls_mrhier.%s;', target_table)
+			EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', target_table)
 			INTO target_rows
 			;
 
 			EXECUTE
 			  format(
 			    '
-				INSERT INTO public.process_umls_mrhier_log
+				INSERT INTO public.process_nci_mrhier_log
 				VALUES (
 				  ''%s'',
 				  ''%s'',
 				  ''%s'',
 				  ''%s'',
 				  ''SNOMEDCT_US'',
-				  ''umls_mrhier'',
+				  ''nci_mrhier'',
 				  ''SNOMEDCT_US'',
 				  ''%s'',
 				  ''%s'',
@@ -1090,7 +1090,7 @@ DECLARE
 	source_rows bigint;
 	target_rows bigint;
 BEGIN
-	SELECT get_umls_mth_version()
+	SELECT get_nci_mth_version()
 	INTO mth_version;
 
 	SELECT check_if_requires_processing(mth_version, 'LOOKUP_PARSE', 'LOOKUP_EXT')
@@ -1104,8 +1104,8 @@ BEGIN
 
   		PERFORM notify_start('processing LOOKUP_EXT');
   		
-		DROP TABLE IF EXISTS umls_mrhier.tmp_lookup_ext;
-		CREATE TABLE umls_mrhier.tmp_lookup_ext AS (
+		DROP TABLE IF EXISTS nci_mrhier.tmp_lookup_ext;
+		CREATE TABLE nci_mrhier.tmp_lookup_ext AS (
 			SELECT
 			  lu.hierarchy_sab,
 			  tmp.root_aui,
@@ -1113,19 +1113,19 @@ BEGIN
 			  tmp.root_str,
 			  COALESCE(tmp.updated_hierarchy_table, lu.hierarchy_table) AS hierarchy_table,
 			  COALESCE(tmp.root_count, lu.count) AS count
-			FROM umls_mrhier.lookup_parse lu
-			LEFT JOIN umls_mrhier.lookup_snomed tmp
+			FROM nci_mrhier.lookup_parse lu
+			LEFT JOIN nci_mrhier.lookup_snomed tmp
 			ON lu.hierarchy_table = tmp.hierarchy_table
 		)
 		;
-		DROP TABLE IF EXISTS umls_mrhier.lookup_ext;
-		CREATE TABLE umls_mrhier.lookup_ext AS (
+		DROP TABLE IF EXISTS nci_mrhier.lookup_ext;
+		CREATE TABLE nci_mrhier.lookup_ext AS (
 		  SELECT
 		  	*,
 		  	SUBSTRING(CONCAT('ext_', hierarchy_table), 1, 60) AS extended_table
-		  FROM umls_mrhier.tmp_lookup_ext
+		  FROM nci_mrhier.tmp_lookup_ext
 		);
-		DROP TABLE umls_mrhier.tmp_lookup_ext;
+		DROP TABLE nci_mrhier.tmp_lookup_ext;
 		
 		COMMIT;
 		
@@ -1135,33 +1135,33 @@ BEGIN
 		INTO stop_timestamp
 		;
 
-		SELECT get_umls_mth_version()
+		SELECT get_nci_mth_version()
 		INTO mth_version
 		;
 
-		SELECT get_umls_mth_dt()
+		SELECT get_nci_mth_dt()
 		INTO mth_date
 		;
 
-		SELECT get_row_count('umls_mrhier.lookup_parse')
+		SELECT get_row_count('nci_mrhier.lookup_parse')
 		INTO source_rows
 		;
 
-		SELECT get_row_count('umls_mrhier.lookup_ext')
+		SELECT get_row_count('nci_mrhier.lookup_ext')
 		INTO target_rows
 		;
 
 		EXECUTE
 		  format(
 		    '
-			INSERT INTO public.process_umls_mrhier_log
+			INSERT INTO public.process_nci_mrhier_log
 			VALUES (
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  NULL,
-			  ''umls_mrhier'',
+			  ''nci_mrhier'',
 			  ''LOOKUP_PARSE'',
 			  ''LOOKUP_EXT'',
 			  ''%s'',
@@ -1205,11 +1205,11 @@ DECLARE
 	iteration int;
     total_iterations int;
 BEGIN
-	SELECT get_umls_mth_version()
+	SELECT get_nci_mth_version()
 	INTO mth_version;
 
-	SELECT COUNT(*) INTO total_iterations FROM umls_mrhier.lookup_ext;
-    FOR f IN SELECT ROW_NUMBER() OVER() AS iteration, l.* FROM umls_mrhier.lookup_ext l
+	SELECT COUNT(*) INTO total_iterations FROM nci_mrhier.lookup_ext;
+    FOR f IN SELECT ROW_NUMBER() OVER() AS iteration, l.* FROM nci_mrhier.lookup_ext l
     LOOP
 		iteration    := f.iteration;
 		source_table := f.hierarchy_table;
@@ -1234,8 +1234,8 @@ BEGIN
 			EXECUTE
 			format(
 			  '
-			  DROP TABLE IF EXISTS umls_mrhier.%s;
-			  CREATE TABLE  umls_mrhier.%s (
+			  DROP TABLE IF EXISTS nci_mrhier.%s;
+			  CREATE TABLE  nci_mrhier.%s (
 			    ptr_id INTEGER NOT NULL,
 			    ptr text NOT NULL,
 			  	aui varchar(12),
@@ -1260,7 +1260,7 @@ BEGIN
 				  aui AS ptr_aui,
 				  code AS ptr_code,
 				  str AS ptr_str
-				FROM umls_mrhier.%s
+				FROM nci_mrhier.%s
 				GROUP BY ptr_id, ptr, aui, code, str, rela
 			  ),
 			  with_leafs AS (
@@ -1268,10 +1268,10 @@ BEGIN
 			  	FROM leafs
 			  	UNION
 			  	SELECT *
-			  	FROM umls_mrhier.%s
+			  	FROM nci_mrhier.%s
 			  )
 
-			  INSERT INTO umls_mrhier.%s
+			  INSERT INTO nci_mrhier.%s
 			  SELECT *
 			  FROM with_leafs
 			  ORDER BY ptr_id, ptr_level
@@ -1292,30 +1292,30 @@ BEGIN
 			INTO stop_timestamp
 			;
 
-			SELECT get_umls_mth_version()
+			SELECT get_nci_mth_version()
 			INTO mth_version
 			;
 
-			SELECT get_umls_mth_dt()
+			SELECT get_nci_mth_dt()
 			INTO mth_date
 			;
 
 
-			EXECUTE format('SELECT COUNT(*) FROM umls_mrhier.%s;', target_table)
+			EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', target_table)
 			INTO target_rows
 			;
 
 			EXECUTE
 			  format(
 			    '
-				INSERT INTO public.process_umls_mrhier_log
+				INSERT INTO public.process_nci_mrhier_log
 				VALUES (
 				  ''%s'',
 				  ''%s'',
 				  ''%s'',
 				  ''%s'',
 				  ''%s'',
-				  ''umls_mrhier'',
+				  ''nci_mrhier'',
 				  ''%s'',
 				  ''%s'',
 				  ''%s'',
@@ -1362,7 +1362,7 @@ DECLARE
 	source_rows bigint;
 	target_rows bigint;
 BEGIN
-	SELECT get_umls_mth_version()
+	SELECT get_nci_mth_version()
 	INTO mth_version;
 
 	SELECT check_if_requires_processing(mth_version, 'LOOKUP_EXT', 'LOOKUP_PIVOT_TABLES')
@@ -1377,13 +1377,13 @@ BEGIN
   		PERFORM notify_start('processing LOOKUP_PIVOT_TABLES');
 
   		
-		DROP TABLE IF EXISTS umls_mrhier.lookup_pivot_tables;
-		CREATE TABLE umls_mrhier.lookup_pivot_tables AS (
+		DROP TABLE IF EXISTS nci_mrhier.lookup_pivot_tables;
+		CREATE TABLE nci_mrhier.lookup_pivot_tables AS (
 		  SELECT
 		  	*,
 		  	SUBSTRING(CONCAT('tmp_pivot_', hierarchy_table), 1, 60) AS tmp_pivot_table,
 		  	SUBSTRING(CONCAT('pivot_', hierarchy_table), 1, 60) AS pivot_table
-		  FROM umls_mrhier.lookup_ext
+		  FROM nci_mrhier.lookup_ext
 		);
 		COMMIT;
 		
@@ -1391,33 +1391,33 @@ BEGIN
 		INTO stop_timestamp
 		;
 
-		SELECT get_umls_mth_version()
+		SELECT get_nci_mth_version()
 		INTO mth_version
 		;
 
-		SELECT get_umls_mth_dt()
+		SELECT get_nci_mth_dt()
 		INTO mth_date
 		;
 
-		SELECT get_row_count('umls_mrhier.lookup_ext')
+		SELECT get_row_count('nci_mrhier.lookup_ext')
 		INTO source_rows
 		;
 
-		SELECT get_row_count('umls_mrhier.lookup_pivot_tables')
+		SELECT get_row_count('nci_mrhier.lookup_pivot_tables')
 		INTO target_rows
 		;
 
 		EXECUTE
 		  format(
 		    '
-			INSERT INTO public.process_umls_mrhier_log
+			INSERT INTO public.process_nci_mrhier_log
 			VALUES (
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  NULL,
-			  ''umls_mrhier'',
+			  ''nci_mrhier'',
 			  ''LOOKUP_EXT'',
 			  ''LOOKUP_PIVOT_TABLES'',
 			  ''%s'',
@@ -1468,7 +1468,7 @@ DECLARE
 	iteration int;
     total_iterations int;
 BEGIN
-	SELECT get_umls_mth_version()
+	SELECT get_nci_mth_version()
 	INTO mth_version;
 	
 	SELECT check_if_requires_processing(mth_version, 'LOOKUP_PIVOT_TABLES', 'LOOKUP_PIVOT_CROSSTAB')
@@ -1479,8 +1479,8 @@ BEGIN
 		INTO start_timestamp
 		;
 		
-		DROP TABLE IF EXISTS umls_mrhier.lookup_pivot_crosstab;
-		CREATE TABLE  umls_mrhier.lookup_pivot_crosstab (
+		DROP TABLE IF EXISTS nci_mrhier.lookup_pivot_crosstab;
+		CREATE TABLE  nci_mrhier.lookup_pivot_crosstab (
 		  extended_table varchar(255),
 		  tmp_pivot_table varchar(255),
 		  pivot_table varchar(255),
@@ -1494,33 +1494,33 @@ BEGIN
 		INTO stop_timestamp
 		;
 
-		SELECT get_umls_mth_version()
+		SELECT get_nci_mth_version()
 		INTO mth_version
 		;
 
-		SELECT get_umls_mth_dt()
+		SELECT get_nci_mth_dt()
 		INTO mth_date
 		;
 
-		SELECT get_row_count('umls_mrhier.lookup_pivot_tables')
+		SELECT get_row_count('nci_mrhier.lookup_pivot_tables')
 		INTO source_rows
 		;
 
-		SELECT get_row_count('umls_mrhier.lookup_pivot_crosstab')
+		SELECT get_row_count('nci_mrhier.lookup_pivot_crosstab')
 		INTO target_rows
 		;
 
 		EXECUTE
 		  format(
 		    '
-			INSERT INTO public.process_umls_mrhier_log
+			INSERT INTO public.process_nci_mrhier_log
 			VALUES (
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  NULL,
-			  ''umls_mrhier'',
+			  ''nci_mrhier'',
 			  ''LOOKUP_PIVOT_TABLES'',
 			  ''LOOKUP_PIVOT_CROSSTAB'',
 			  ''%s'',
@@ -1539,8 +1539,8 @@ BEGIN
 		
 	END IF;
 
-	SELECT COUNT(*) INTO total_iterations FROM umls_mrhier.lookup_pivot_tables WHERE hierarchy_sab <> 'SRC';
-    FOR f IN SELECT ROW_NUMBER() OVER() AS iteration, l.* FROM umls_mrhier.lookup_pivot_tables l WHERE l.hierarchy_sab <> 'SRC'
+	SELECT COUNT(*) INTO total_iterations FROM nci_mrhier.lookup_pivot_tables WHERE hierarchy_sab <> 'SRC';
+    FOR f IN SELECT ROW_NUMBER() OVER() AS iteration, l.* FROM nci_mrhier.lookup_pivot_tables l WHERE l.hierarchy_sab <> 'SRC'
     LOOP
 		iteration    := f.iteration;
 		source_table := f.extended_table;
@@ -1563,7 +1563,7 @@ BEGIN
 
 		PERFORM notify_iteration(iteration, total_iterations, source_table || ' (' || source_rows || ' rows)');
 
-		EXECUTE format('SELECT MAX(ptr_level) FROM umls_mrhier.%s', source_table)
+		EXECUTE format('SELECT MAX(ptr_level) FROM nci_mrhier.%s', source_table)
 		INTO max_level;
 
 
@@ -1592,8 +1592,8 @@ BEGIN
 	          extended_table,
 	          tmp_pivot_table,
 	          pivot_table,
-	          '''''''' || CONCAT(''SELECT ptr_id, ptr_level, ptr_str FROM umls_mrhier.'', extended_table, '' ORDER BY 1,2'') || '''''''' AS crosstab_arg1,
-	          '''''''' || CONCAT(''SELECT DISTINCT ptr_level FROM umls_mrhier.'', extended_table, '' ORDER BY 1'') || '''''''' AS crosstab_arg2,
+	          '''''''' || CONCAT(''SELECT ptr_id, ptr_level, ptr_str FROM nci_mrhier.'', extended_table, '' ORDER BY 1,2'') || '''''''' AS crosstab_arg1,
+	          '''''''' || CONCAT(''SELECT DISTINCT ptr_level FROM nci_mrhier.'', extended_table, '' ORDER BY 1'') || '''''''' AS crosstab_arg2,
 	          crosstab_ddl
 	         FROM seq3
 	      ),
@@ -1602,12 +1602,12 @@ BEGIN
 	      	  extended_table,
 	      	  tmp_pivot_table,
 	      	  pivot_table,
-	      	  ''DROP TABLE IF EXISTS umls_mrhier.'' || tmp_pivot_table || '';'' || '' CREATE TABLE umls_mrhier.'' || tmp_pivot_table || '' AS (SELECT * FROM CROSSTAB('' || crosstab_arg1 || '','' || crosstab_arg2 || '') AS ('' || crosstab_ddl || ''));'' AS sql_statement
+	      	  ''DROP TABLE IF EXISTS nci_mrhier.'' || tmp_pivot_table || '';'' || '' CREATE TABLE nci_mrhier.'' || tmp_pivot_table || '' AS (SELECT * FROM CROSSTAB('' || crosstab_arg1 || '','' || crosstab_arg2 || '') AS ('' || crosstab_ddl || ''));'' AS sql_statement
 	      	  FROM seq4
 
 	      )
 
-	      INSERT INTO umls_mrhier.lookup_pivot_crosstab
+	      INSERT INTO nci_mrhier.lookup_pivot_crosstab
 	      SELECT * FROM seq5
 	      ;
 	      ',
@@ -1625,11 +1625,11 @@ BEGIN
 		INTO stop_timestamp
 		;
 
-		SELECT get_umls_mth_version()
+		SELECT get_nci_mth_version()
 		INTO mth_version
 		;
 
-		SELECT get_umls_mth_dt()
+		SELECT get_nci_mth_dt()
 		INTO mth_date
 		;
 
@@ -1637,14 +1637,14 @@ BEGIN
 		EXECUTE
 		  format(
 		    '
-			INSERT INTO public.process_umls_mrhier_log
+			INSERT INTO public.process_nci_mrhier_log
 			VALUES (
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
-			  ''umls_mrhier'',
+			  ''nci_mrhier'',
 			  ''%s'',
 			  ''LOOKUP_PIVOT_CROSSTAB'',
 			  ''%s'',
@@ -1691,11 +1691,11 @@ DECLARE
     total_iterations int;
     sql_statement text;
 BEGIN
-	SELECT get_umls_mth_version()
+	SELECT get_nci_mth_version()
 	INTO mth_version;
 
-	SELECT COUNT(*) INTO total_iterations FROM umls_mrhier.lookup_pivot_crosstab;
-    FOR f IN SELECT ROW_NUMBER() OVER() AS iteration, l.* FROM umls_mrhier.lookup_pivot_crosstab l
+	SELECT COUNT(*) INTO total_iterations FROM nci_mrhier.lookup_pivot_crosstab;
+    FOR f IN SELECT ROW_NUMBER() OVER() AS iteration, l.* FROM nci_mrhier.lookup_pivot_crosstab l
     LOOP
 		iteration    := f.iteration;
 		source_table := f.extended_table;
@@ -1723,18 +1723,18 @@ BEGIN
 	    EXECUTE
 	      format(
 	      	'
-	      	DROP TABLE IF EXISTS umls_mrhier.%s;
-	      	CREATE TABLE umls_mrhier.%s AS (
+	      	DROP TABLE IF EXISTS nci_mrhier.%s;
+	      	CREATE TABLE nci_mrhier.%s AS (
 		      	SELECT DISTINCT
 		      	  h.aui,
 		      	  h.code,
 		      	  h.str,
 		      	  t.*
-		      	FROM umls_mrhier.%s h
-		      	LEFT JOIN umls_mrhier.%s t
+		      	FROM nci_mrhier.%s h
+		      	LEFT JOIN nci_mrhier.%s t
 		      	ON t.ptr_id = h.ptr_id
 	      	);
-	      	DROP TABLE umls_mrhier.%s;
+	      	DROP TABLE nci_mrhier.%s;
 	      	',
 	      		target_table,
 	      		target_table,
@@ -1751,32 +1751,32 @@ BEGIN
 		INTO stop_timestamp
 		;
 
-		SELECT get_umls_mth_version()
+		SELECT get_nci_mth_version()
 		INTO mth_version
 		;
 
-		SELECT get_umls_mth_dt()
+		SELECT get_nci_mth_dt()
 		INTO mth_date
 		;
 
-		EXECUTE format('SELECT COUNT(*) FROM umls_mrhier.%s;', target_table)
+		EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', target_table)
 		INTO target_rows;
 
-		EXECUTE format('SELECT COUNT(*) FROM umls_mrhier.%s;', source_table)
+		EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', source_table)
 		INTO source_rows;
 
 
 		EXECUTE
 		  format(
 		    '
-			INSERT INTO public.process_umls_mrhier_log
+			INSERT INTO public.process_nci_mrhier_log
 			VALUES (
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  NULL,
-			  ''umls_mrhier'',
+			  ''nci_mrhier'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
@@ -1824,7 +1824,7 @@ DECLARE
 	source_rows bigint;
 	target_rows bigint;
 BEGIN
-	SELECT get_umls_mth_version()
+	SELECT get_nci_mth_version()
 	INTO mth_version;
 
 	SELECT check_if_requires_processing(mth_version, 'LOOKUP_EXT', 'LOOKUP_PIVOT_TABLES_CODE')
@@ -1839,13 +1839,13 @@ BEGIN
   		PERFORM notify_start('processing LOOKUP_PIVOT_TABLES_CODE');
 
   		
-		DROP TABLE IF EXISTS umls_mrhier.lookup_pivot_tables_code;
-		CREATE TABLE umls_mrhier.lookup_pivot_tables_code AS (
+		DROP TABLE IF EXISTS nci_mrhier.lookup_pivot_tables_code;
+		CREATE TABLE nci_mrhier.lookup_pivot_tables_code AS (
 		  SELECT
 		  	*,
 		  	SUBSTRING(CONCAT('tmp_pivot_code_', hierarchy_table), 1, 60) AS tmp_pivot_code_table,
 		  	SUBSTRING(CONCAT('pivot_code_', hierarchy_table), 1, 60) AS pivot_code_table
-		  FROM umls_mrhier.lookup_ext
+		  FROM nci_mrhier.lookup_ext
 		);
 		COMMIT;
 		
@@ -1853,33 +1853,33 @@ BEGIN
 		INTO stop_timestamp
 		;
 
-		SELECT get_umls_mth_version()
+		SELECT get_nci_mth_version()
 		INTO mth_version
 		;
 
-		SELECT get_umls_mth_dt()
+		SELECT get_nci_mth_dt()
 		INTO mth_date
 		;
 
-		SELECT get_row_count('umls_mrhier.lookup_ext')
+		SELECT get_row_count('nci_mrhier.lookup_ext')
 		INTO source_rows
 		;
 
-		SELECT get_row_count('umls_mrhier.lookup_pivot_tables_code')
+		SELECT get_row_count('nci_mrhier.lookup_pivot_tables_code')
 		INTO target_rows
 		;
 
 		EXECUTE
 		  format(
 		    '
-			INSERT INTO public.process_umls_mrhier_log
+			INSERT INTO public.process_nci_mrhier_log
 			VALUES (
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  NULL,
-			  ''umls_mrhier'',
+			  ''nci_mrhier'',
 			  ''LOOKUP_EXT'',
 			  ''LOOKUP_PIVOT_TABLES_CODE'',
 			  ''%s'',
@@ -1928,7 +1928,7 @@ DECLARE
 	iteration int;
     total_iterations int;
 BEGIN
-	SELECT get_umls_mth_version()
+	SELECT get_nci_mth_version()
 	INTO mth_version;
 	
 	SELECT check_if_requires_processing(mth_version, 'LOOKUP_PIVOT_TABLES_CODE', 'LOOKUP_PIVOT_CROSSTAB_CODE')
@@ -1939,8 +1939,8 @@ BEGIN
 		INTO start_timestamp
 		;
 		
-		DROP TABLE IF EXISTS umls_mrhier.lookup_pivot_crosstab_code;
-		CREATE TABLE  umls_mrhier.lookup_pivot_crosstab_code (
+		DROP TABLE IF EXISTS nci_mrhier.lookup_pivot_crosstab_code;
+		CREATE TABLE  nci_mrhier.lookup_pivot_crosstab_code (
 		  extended_table varchar(255),
 		  tmp_pivot_code_table varchar(255),
 		  pivot_code_table varchar(255),
@@ -1954,33 +1954,33 @@ BEGIN
 		INTO stop_timestamp
 		;
 
-		SELECT get_umls_mth_version()
+		SELECT get_nci_mth_version()
 		INTO mth_version
 		;
 
-		SELECT get_umls_mth_dt()
+		SELECT get_nci_mth_dt()
 		INTO mth_date
 		;
 
-		SELECT get_row_count('umls_mrhier.lookup_pivot_tables_code')
+		SELECT get_row_count('nci_mrhier.lookup_pivot_tables_code')
 		INTO source_rows
 		;
 
-		SELECT get_row_count('umls_mrhier.lookup_pivot_crosstab_code')
+		SELECT get_row_count('nci_mrhier.lookup_pivot_crosstab_code')
 		INTO target_rows
 		;
 
 		EXECUTE
 		  format(
 		    '
-			INSERT INTO public.process_umls_mrhier_log
+			INSERT INTO public.process_nci_mrhier_log
 			VALUES (
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  NULL,
-			  ''umls_mrhier'',
+			  ''nci_mrhier'',
 			  ''LOOKUP_PIVOT_TABLES_CODE'',
 			  ''LOOKUP_PIVOT_CROSSTAB_CODE'',
 			  ''%s'',
@@ -1999,8 +1999,8 @@ BEGIN
 		
 	END IF;
 
-	SELECT COUNT(*) INTO total_iterations FROM umls_mrhier.lookup_pivot_tables_code WHERE hierarchy_sab <> 'SRC';
-    FOR f IN SELECT ROW_NUMBER() OVER() AS iteration, l.* FROM umls_mrhier.lookup_pivot_tables_code l WHERE l.hierarchy_sab <> 'SRC'
+	SELECT COUNT(*) INTO total_iterations FROM nci_mrhier.lookup_pivot_tables_code WHERE hierarchy_sab <> 'SRC';
+    FOR f IN SELECT ROW_NUMBER() OVER() AS iteration, l.* FROM nci_mrhier.lookup_pivot_tables_code l WHERE l.hierarchy_sab <> 'SRC'
     LOOP
 		iteration    := f.iteration;
 		source_table := f.extended_table;
@@ -2023,7 +2023,7 @@ BEGIN
 
 		PERFORM notify_iteration(iteration, total_iterations, source_table || ' (' || source_rows || ' rows)');
 
-		EXECUTE format('SELECT MAX(ptr_level) FROM umls_mrhier.%s', source_table)
+		EXECUTE format('SELECT MAX(ptr_level) FROM nci_mrhier.%s', source_table)
 		INTO max_level;
 
 
@@ -2052,8 +2052,8 @@ BEGIN
 	          extended_table,
 	          tmp_pivot_code_table,
 	          pivot_code_table,
-	          '''''''' || CONCAT(''SELECT ptr_id, ptr_level, ptr_code FROM umls_mrhier.'', extended_table, '' ORDER BY 1,2'') || '''''''' AS crosstab_arg1,
-	          '''''''' || CONCAT(''SELECT DISTINCT ptr_level FROM umls_mrhier.'', extended_table, '' ORDER BY 1'') || '''''''' AS crosstab_arg2,
+	          '''''''' || CONCAT(''SELECT ptr_id, ptr_level, ptr_code FROM nci_mrhier.'', extended_table, '' ORDER BY 1,2'') || '''''''' AS crosstab_arg1,
+	          '''''''' || CONCAT(''SELECT DISTINCT ptr_level FROM nci_mrhier.'', extended_table, '' ORDER BY 1'') || '''''''' AS crosstab_arg2,
 	          crosstab_ddl
 	         FROM seq3
 	      ),
@@ -2062,12 +2062,12 @@ BEGIN
 	      	  extended_table,
 	      	  tmp_pivot_code_table,
 	      	  pivot_code_table,
-	      	  ''DROP TABLE IF EXISTS umls_mrhier.'' || tmp_pivot_code_table || '';'' || '' CREATE TABLE umls_mrhier.'' || tmp_pivot_code_table || '' AS (SELECT * FROM CROSSTAB('' || crosstab_arg1 || '','' || crosstab_arg2 || '') AS ('' || crosstab_ddl || ''));'' AS sql_statement
+	      	  ''DROP TABLE IF EXISTS nci_mrhier.'' || tmp_pivot_code_table || '';'' || '' CREATE TABLE nci_mrhier.'' || tmp_pivot_code_table || '' AS (SELECT * FROM CROSSTAB('' || crosstab_arg1 || '','' || crosstab_arg2 || '') AS ('' || crosstab_ddl || ''));'' AS sql_statement
 	      	  FROM seq4
 
 	      )
 
-	      INSERT INTO umls_mrhier.lookup_pivot_crosstab_code
+	      INSERT INTO nci_mrhier.lookup_pivot_crosstab_code
 	      SELECT * FROM seq5
 	      ;
 	      ',
@@ -2085,11 +2085,11 @@ BEGIN
 		INTO stop_timestamp
 		;
 
-		SELECT get_umls_mth_version()
+		SELECT get_nci_mth_version()
 		INTO mth_version
 		;
 
-		SELECT get_umls_mth_dt()
+		SELECT get_nci_mth_dt()
 		INTO mth_date
 		;
 
@@ -2097,14 +2097,14 @@ BEGIN
 		EXECUTE
 		  format(
 		    '
-			INSERT INTO public.process_umls_mrhier_log
+			INSERT INTO public.process_nci_mrhier_log
 			VALUES (
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
-			  ''umls_mrhier'',
+			  ''nci_mrhier'',
 			  ''%s'',
 			  ''LOOKUP_PIVOT_CROSSTAB_CODE'',
 			  ''%s'',
@@ -2152,11 +2152,11 @@ DECLARE
     total_iterations int;
     sql_statement text;
 BEGIN
-	SELECT get_umls_mth_version()
+	SELECT get_nci_mth_version()
 	INTO mth_version;
 
-	SELECT COUNT(*) INTO total_iterations FROM umls_mrhier.lookup_pivot_crosstab_code;
-    FOR f IN SELECT ROW_NUMBER() OVER() AS iteration, l.* FROM umls_mrhier.lookup_pivot_crosstab_code l
+	SELECT COUNT(*) INTO total_iterations FROM nci_mrhier.lookup_pivot_crosstab_code;
+    FOR f IN SELECT ROW_NUMBER() OVER() AS iteration, l.* FROM nci_mrhier.lookup_pivot_crosstab_code l
     LOOP
 		iteration    := f.iteration;
 		source_table := f.extended_table;
@@ -2186,18 +2186,18 @@ BEGIN
 	    EXECUTE
 	      format(
 	      	'
-	      	DROP TABLE IF EXISTS umls_mrhier.%s;
-	      	CREATE TABLE umls_mrhier.%s AS (
+	      	DROP TABLE IF EXISTS nci_mrhier.%s;
+	      	CREATE TABLE nci_mrhier.%s AS (
 		      	SELECT DISTINCT
 		      	  h.aui,
 		      	  h.code,
 		      	  h.str,
 		      	  t.*
-		      	FROM umls_mrhier.%s h
-		      	LEFT JOIN umls_mrhier.%s t
+		      	FROM nci_mrhier.%s h
+		      	LEFT JOIN nci_mrhier.%s t
 		      	ON t.ptr_id = h.ptr_id
 	      	);
-	      	DROP TABLE umls_mrhier.%s;
+	      	DROP TABLE nci_mrhier.%s;
 	      	',
 	      		target_table,
 	      		target_table,
@@ -2214,32 +2214,32 @@ BEGIN
 		INTO stop_timestamp
 		;
 
-		SELECT get_umls_mth_version()
+		SELECT get_nci_mth_version()
 		INTO mth_version
 		;
 
-		SELECT get_umls_mth_dt()
+		SELECT get_nci_mth_dt()
 		INTO mth_date
 		;
 
-		EXECUTE format('SELECT COUNT(*) FROM umls_mrhier.%s;', target_table)
+		EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', target_table)
 		INTO target_rows;
 
-		EXECUTE format('SELECT COUNT(*) FROM umls_mrhier.%s;', source_table)
+		EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', source_table)
 		INTO source_rows;
 
 
 		EXECUTE
 		  format(
 		    '
-			INSERT INTO public.process_umls_mrhier_log
+			INSERT INTO public.process_nci_mrhier_log
 			VALUES (
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  NULL,
-			  ''umls_mrhier'',
+			  ''nci_mrhier'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
@@ -2301,7 +2301,7 @@ DECLARE
 	iteration int;
     total_iterations int;
 BEGIN
-	SELECT get_umls_mth_version()
+	SELECT get_nci_mth_version()
 	INTO mth_version;
 	
 	SELECT check_if_requires_processing(mth_version, 'LOOKUP_EXT', 'LOOKUP_MRHIER_ABS_MAX')
@@ -2313,8 +2313,8 @@ BEGIN
 		INTO start_timestamp
 		;
 		
-		DROP TABLE IF EXISTS umls_mrhier.lookup_mrhier_abs_max;
-		CREATE TABLE umls_mrhier.lookup_mrhier_abs_max (
+		DROP TABLE IF EXISTS nci_mrhier.lookup_mrhier_abs_max;
+		CREATE TABLE nci_mrhier.lookup_mrhier_abs_max (
 		  extended_table varchar(255),
 		  max_ptr_level int
 		);	
@@ -2325,28 +2325,28 @@ BEGIN
 		INTO stop_timestamp
 		;
 
-		SELECT get_umls_mth_dt()
+		SELECT get_nci_mth_dt()
 		INTO mth_date
 		;
 
-		EXECUTE format('SELECT COUNT(*) FROM umls_mrhier.%s;', 'lookup_ext')
+		EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', 'lookup_ext')
 		INTO target_rows;
 
-		EXECUTE format('SELECT COUNT(*) FROM umls_mrhier.%s;', 'lookup_mrhier_abs_max')
+		EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', 'lookup_mrhier_abs_max')
 		INTO source_rows;
 
 
 		EXECUTE
 		  format(
 		    '
-			INSERT INTO public.process_umls_mrhier_log
+			INSERT INTO public.process_nci_mrhier_log
 			VALUES (
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  NULL,
-			  ''umls_mrhier'',
+			  ''nci_mrhier'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
@@ -2366,8 +2366,8 @@ BEGIN
 	
 	END IF;
 	
-	SELECT COUNT(*) INTO total_iterations FROM umls_mrhier.lookup_ext;
-  	for f in select ROW_NUMBER() OVER() AS iteration, l.* from umls_mrhier.lookup_ext l
+	SELECT COUNT(*) INTO total_iterations FROM nci_mrhier.lookup_ext;
+  	for f in select ROW_NUMBER() OVER() AS iteration, l.* from nci_mrhier.lookup_ext l
  	LOOP
  		iteration    := f.iteration;
 		source_table := f.extended_table;
@@ -2388,11 +2388,11 @@ BEGIN
 			EXECUTE
 		      format(
 		      	'
-		      	INSERT INTO umls_mrhier.lookup_mrhier_abs_max
+		      	INSERT INTO nci_mrhier.lookup_mrhier_abs_max
 		      	SELECT
 		      	 ''%s'' AS extended_table,
 		      	 MAX(ptr_level) AS max_ptr_level
-		      	 FROM umls_mrhier.%s
+		      	 FROM nci_mrhier.%s
 		      	 ;
 		      	',
 		      		source_table,
@@ -2406,32 +2406,32 @@ BEGIN
 			INTO stop_timestamp
 			;
 	
-			SELECT get_umls_mth_version()
+			SELECT get_nci_mth_version()
 			INTO mth_version
 			;
 	
-			SELECT get_umls_mth_dt()
+			SELECT get_nci_mth_dt()
 			INTO mth_date
 			;
 	
-			EXECUTE format('SELECT COUNT(*) FROM umls_mrhier.%s;', target_table)
+			EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', target_table)
 			INTO target_rows;
 	
-			EXECUTE format('SELECT COUNT(*) FROM umls_mrhier.%s;', source_table)
+			EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', source_table)
 			INTO source_rows;
 	
 	
 			EXECUTE
 			  format(
 			    '
-				INSERT INTO public.process_umls_mrhier_log
+				INSERT INTO public.process_nci_mrhier_log
 				VALUES (
 				  ''%s'',
 				  ''%s'',
 				  ''%s'',
 				  ''%s'',
 				  NULL,
-				  ''umls_mrhier'',
+				  ''nci_mrhier'',
 				  ''%s'',
 				  ''%s'',
 				  ''%s'',
@@ -2483,7 +2483,7 @@ DECLARE
     processed_mrhier_ddl text;
     abs_max_ptr_level int;
 BEGIN
-	SELECT get_umls_mth_version()
+	SELECT get_nci_mth_version()
 	INTO mth_version;
 	
 	SELECT check_if_requires_processing(mth_version, 'LOOKUP_MRHIER_ABS_MAX', 'LOOKUP_MRHIER_DDL')
@@ -2495,13 +2495,13 @@ BEGIN
 		INTO start_timestamp
 		;
 		
-		SELECT MAX(max_ptr_level) INTO abs_max_ptr_level FROM umls_mrhier.lookup_mrhier_abs_max; 
+		SELECT MAX(max_ptr_level) INTO abs_max_ptr_level FROM nci_mrhier.lookup_mrhier_abs_max; 
 		
 		EXECUTE
 		format(
 		'
-		DROP TABLE IF EXISTS umls_mrhier.lookup_mrhier_ddl; 
-		CREATE TABLE umls_mrhier.lookup_mrhier_ddl (
+		DROP TABLE IF EXISTS nci_mrhier.lookup_mrhier_ddl; 
+		CREATE TABLE nci_mrhier.lookup_mrhier_ddl (
 			ddl text
 		);
 
@@ -2513,7 +2513,7 @@ BEGIN
 		      FROM seq1
 		  )
 		
-		  INSERT INTO umls_mrhier.lookup_mrhier_ddl
+		  INSERT INTO nci_mrhier.lookup_mrhier_ddl
 		  SELECT ddl
 		  FROM seq2
 		  ;',
@@ -2526,32 +2526,32 @@ BEGIN
 			INTO stop_timestamp
 			;
 	
-			SELECT get_umls_mth_version()
+			SELECT get_nci_mth_version()
 			INTO mth_version
 			;
 	
-			SELECT get_umls_mth_dt()
+			SELECT get_nci_mth_dt()
 			INTO mth_date
 			;
 	
-			EXECUTE format('SELECT COUNT(*) FROM umls_mrhier.%s;', 'LOOKUP_MRHIER_DDL')
+			EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', 'LOOKUP_MRHIER_DDL')
 			INTO target_rows;
 	
-			EXECUTE format('SELECT COUNT(*) FROM umls_mrhier.%s;', 'LOOKUP_MRHIER_ABS_MAX')
+			EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', 'LOOKUP_MRHIER_ABS_MAX')
 			INTO source_rows;
 	
 	
 			EXECUTE
 			  format(
 			    '
-				INSERT INTO public.process_umls_mrhier_log
+				INSERT INTO public.process_nci_mrhier_log
 				VALUES (
 				  ''%s'',
 				  ''%s'',
 				  ''%s'',
 				  ''%s'',
 				  NULL,
-				  ''umls_mrhier'',
+				  ''nci_mrhier'',
 				  ''%s'',
 				  ''%s'',
 				  ''%s'',
@@ -2579,13 +2579,13 @@ BEGIN
 	
 	  SELECT ddl
 	  INTO processed_mrhier_ddl
-	  FROM umls_mrhier.lookup_mrhier_ddl;
+	  FROM nci_mrhier.lookup_mrhier_ddl;
 	
 	  EXECUTE
 	    format(
 	    '
-	    DROP TABLE IF EXISTS umls_mrhier.mrhier_str;
-	    CREATE TABLE umls_mrhier.mrhier_str (
+	    DROP TABLE IF EXISTS nci_mrhier.mrhier_str;
+	    CREATE TABLE nci_mrhier.mrhier_str (
 	      aui varchar(12),
 	      code text,
 	      str text,
@@ -2603,28 +2603,28 @@ BEGIN
 		INTO stop_timestamp
 		;
 
-		SELECT get_umls_mth_dt()
+		SELECT get_nci_mth_dt()
 		INTO mth_date
 		;
 
-		EXECUTE format('SELECT COUNT(*) FROM umls_mrhier.%s;', 'MRHIER_STR')
+		EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', 'MRHIER_STR')
 		INTO target_rows;
 
-		EXECUTE format('SELECT COUNT(*) FROM umls_mrhier.%s;', 'LOOKUP_MRHIER_DDL')
+		EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', 'LOOKUP_MRHIER_DDL')
 		INTO source_rows;
 
 
 		EXECUTE
 		  format(
 		    '
-			INSERT INTO public.process_umls_mrhier_log
+			INSERT INTO public.process_nci_mrhier_log
 			VALUES (
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  NULL,
-			  ''umls_mrhier'',
+			  ''nci_mrhier'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
@@ -2644,8 +2644,8 @@ BEGIN
 	
 	END IF;
 	
-  SELECT COUNT(*) INTO total_iterations FROM umls_mrhier.lookup_pivot_crosstab;
-  for f in select ROW_NUMBER() OVER() AS iteration, pl.* from umls_mrhier.lookup_pivot_crosstab pl
+  SELECT COUNT(*) INTO total_iterations FROM nci_mrhier.lookup_pivot_crosstab;
+  for f in select ROW_NUMBER() OVER() AS iteration, pl.* from nci_mrhier.lookup_pivot_crosstab pl
   loop
     iteration := f.iteration;
     pivot_table := f.pivot_table;
@@ -2667,8 +2667,8 @@ BEGIN
 		
 	    EXECUTE
 	      format('
-	      INSERT INTO umls_mrhier.mrhier_str
-	      SELECT * FROM umls_mrhier.%s
+	      INSERT INTO nci_mrhier.mrhier_str
+	      SELECT * FROM nci_mrhier.%s
 	      ',
 	      pivot_table
 	      );
@@ -2679,28 +2679,28 @@ BEGIN
 		INTO stop_timestamp
 		;
 
-		SELECT get_umls_mth_dt()
+		SELECT get_nci_mth_dt()
 		INTO mth_date
 		;
 
-		EXECUTE format('SELECT COUNT(*) FROM umls_mrhier.%s;', 'MRHIER_STR')
+		EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', 'MRHIER_STR')
 		INTO target_rows;
 
-		EXECUTE format('SELECT COUNT(*) FROM umls_mrhier.%s;', source_table)
+		EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', source_table)
 		INTO source_rows;
 
 
 		EXECUTE
 		  format(
 		    '
-			INSERT INTO public.process_umls_mrhier_log
+			INSERT INTO public.process_nci_mrhier_log
 			VALUES (
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  NULL,
-			  ''umls_mrhier'',
+			  ''nci_mrhier'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
@@ -2758,7 +2758,7 @@ DECLARE
 	iteration int;
     total_iterations int;
 BEGIN
-	SELECT get_umls_mth_version()
+	SELECT get_nci_mth_version()
 	INTO mth_version;
 	
 	SELECT check_if_requires_processing(mth_version, 'LOOKUP_EXT', 'LOOKUP_MRHIER_ABS_MAX')
@@ -2770,8 +2770,8 @@ BEGIN
 		INTO start_timestamp
 		;
 		
-		DROP TABLE IF EXISTS umls_mrhier.lookup_mrhier_abs_max;
-		CREATE TABLE umls_mrhier.lookup_mrhier_abs_max (
+		DROP TABLE IF EXISTS nci_mrhier.lookup_mrhier_abs_max;
+		CREATE TABLE nci_mrhier.lookup_mrhier_abs_max (
 		  extended_table varchar(255),
 		  max_ptr_level int
 		);	
@@ -2782,28 +2782,28 @@ BEGIN
 		INTO stop_timestamp
 		;
 
-		SELECT get_umls_mth_dt()
+		SELECT get_nci_mth_dt()
 		INTO mth_date
 		;
 
-		EXECUTE format('SELECT COUNT(*) FROM umls_mrhier.%s;', 'lookup_ext')
+		EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', 'lookup_ext')
 		INTO target_rows;
 
-		EXECUTE format('SELECT COUNT(*) FROM umls_mrhier.%s;', 'lookup_mrhier_abs_max')
+		EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', 'lookup_mrhier_abs_max')
 		INTO source_rows;
 
 
 		EXECUTE
 		  format(
 		    '
-			INSERT INTO public.process_umls_mrhier_log
+			INSERT INTO public.process_nci_mrhier_log
 			VALUES (
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  NULL,
-			  ''umls_mrhier'',
+			  ''nci_mrhier'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
@@ -2821,8 +2821,8 @@ BEGIN
 	
 	END IF;
 	
-	SELECT COUNT(*) INTO total_iterations FROM umls_mrhier.lookup_ext;
-  	for f in select ROW_NUMBER() OVER() AS iteration, l.* from umls_mrhier.lookup_ext l
+	SELECT COUNT(*) INTO total_iterations FROM nci_mrhier.lookup_ext;
+  	for f in select ROW_NUMBER() OVER() AS iteration, l.* from nci_mrhier.lookup_ext l
  	LOOP
  		iteration    := f.iteration;
 		source_table := f.extended_table;
@@ -2843,11 +2843,11 @@ BEGIN
 			EXECUTE
 		      format(
 		      	'
-		      	INSERT INTO umls_mrhier.lookup_mrhier_abs_max
+		      	INSERT INTO nci_mrhier.lookup_mrhier_abs_max
 		      	SELECT
 		      	 ''%s'' AS extended_table,
 		      	 MAX(ptr_level) AS max_ptr_level
-		      	 FROM umls_mrhier.%s
+		      	 FROM nci_mrhier.%s
 		      	 ;
 		      	',
 		      		source_table,
@@ -2861,32 +2861,32 @@ BEGIN
 			INTO stop_timestamp
 			;
 	
-			SELECT get_umls_mth_version()
+			SELECT get_nci_mth_version()
 			INTO mth_version
 			;
 	
-			SELECT get_umls_mth_dt()
+			SELECT get_nci_mth_dt()
 			INTO mth_date
 			;
 	
-			EXECUTE format('SELECT COUNT(*) FROM umls_mrhier.%s;', target_table)
+			EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', target_table)
 			INTO target_rows;
 	
-			EXECUTE format('SELECT COUNT(*) FROM umls_mrhier.%s;', source_table)
+			EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', source_table)
 			INTO source_rows;
 	
 	
 			EXECUTE
 			  format(
 			    '
-				INSERT INTO public.process_umls_mrhier_log
+				INSERT INTO public.process_nci_mrhier_log
 				VALUES (
 				  ''%s'',
 				  ''%s'',
 				  ''%s'',
 				  ''%s'',
 				  NULL,
-				  ''umls_mrhier'',
+				  ''nci_mrhier'',
 				  ''%s'',
 				  ''%s'',
 				  ''%s'',
@@ -2938,7 +2938,7 @@ DECLARE
     processed_mrhier_ddl text;
     abs_max_ptr_level int;
 BEGIN
-	SELECT get_umls_mth_version()
+	SELECT get_nci_mth_version()
 	INTO mth_version;
 	
 	SELECT check_if_requires_processing(mth_version, 'LOOKUP_MRHIER_ABS_MAX', 'LOOKUP_MRHIER_DDL_CODE')
@@ -2950,13 +2950,13 @@ BEGIN
 		INTO start_timestamp
 		;
 		
-		SELECT MAX(max_ptr_level) INTO abs_max_ptr_level FROM umls_mrhier.lookup_mrhier_abs_max; 
+		SELECT MAX(max_ptr_level) INTO abs_max_ptr_level FROM nci_mrhier.lookup_mrhier_abs_max; 
 		
 		EXECUTE
 		format(
 		'
-		DROP TABLE IF EXISTS umls_mrhier.lookup_mrhier_ddl_code; 
-		CREATE TABLE umls_mrhier.lookup_mrhier_ddl_code (
+		DROP TABLE IF EXISTS nci_mrhier.lookup_mrhier_ddl_code; 
+		CREATE TABLE nci_mrhier.lookup_mrhier_ddl_code (
 			ddl text
 		);
 
@@ -2968,7 +2968,7 @@ BEGIN
 		      FROM seq1
 		  )
 		
-		  INSERT INTO umls_mrhier.lookup_mrhier_ddl_code
+		  INSERT INTO nci_mrhier.lookup_mrhier_ddl_code
 		  SELECT ddl
 		  FROM seq2
 		  ;',
@@ -2981,32 +2981,32 @@ BEGIN
 			INTO stop_timestamp
 			;
 	
-			SELECT get_umls_mth_version()
+			SELECT get_nci_mth_version()
 			INTO mth_version
 			;
 	
-			SELECT get_umls_mth_dt()
+			SELECT get_nci_mth_dt()
 			INTO mth_date
 			;
 	
-			EXECUTE format('SELECT COUNT(*) FROM umls_mrhier.%s;', 'LOOKUP_MRHIER_DDL_CODE')
+			EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', 'LOOKUP_MRHIER_DDL_CODE')
 			INTO target_rows;
 	
-			EXECUTE format('SELECT COUNT(*) FROM umls_mrhier.%s;', 'LOOKUP_MRHIER_ABS_MAX')
+			EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', 'LOOKUP_MRHIER_ABS_MAX')
 			INTO source_rows;
 	
 	
 			EXECUTE
 			  format(
 			    '
-				INSERT INTO public.process_umls_mrhier_log
+				INSERT INTO public.process_nci_mrhier_log
 				VALUES (
 				  ''%s'',
 				  ''%s'',
 				  ''%s'',
 				  ''%s'',
 				  NULL,
-				  ''umls_mrhier'',
+				  ''nci_mrhier'',
 				  ''%s'',
 				  ''%s'',
 				  ''%s'',
@@ -3034,13 +3034,13 @@ BEGIN
 	
 	  SELECT ddl
 	  INTO processed_mrhier_ddl
-	  FROM umls_mrhier.lookup_mrhier_ddl_code;
+	  FROM nci_mrhier.lookup_mrhier_ddl_code;
 	
 	  EXECUTE
 	    format(
 	    '
-	    DROP TABLE IF EXISTS umls_mrhier.mrhier_code;
-	    CREATE TABLE umls_mrhier.mrhier_code (
+	    DROP TABLE IF EXISTS nci_mrhier.mrhier_code;
+	    CREATE TABLE nci_mrhier.mrhier_code (
 	      aui varchar(12),
 	      code text,
 	      str text,
@@ -3058,28 +3058,28 @@ BEGIN
 		INTO stop_timestamp
 		;
 
-		SELECT get_umls_mth_dt()
+		SELECT get_nci_mth_dt()
 		INTO mth_date
 		;
 
-		EXECUTE format('SELECT COUNT(*) FROM umls_mrhier.%s;', 'MRHIER_CODE')
+		EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', 'MRHIER_CODE')
 		INTO target_rows;
 
-		EXECUTE format('SELECT COUNT(*) FROM umls_mrhier.%s;', 'LOOKUP_MRHIER_DDL_CODE')
+		EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', 'LOOKUP_MRHIER_DDL_CODE')
 		INTO source_rows;
 
 
 		EXECUTE
 		  format(
 		    '
-			INSERT INTO public.process_umls_mrhier_log
+			INSERT INTO public.process_nci_mrhier_log
 			VALUES (
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  NULL,
-			  ''umls_mrhier'',
+			  ''nci_mrhier'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
@@ -3099,8 +3099,8 @@ BEGIN
 	
 	END IF;
 	
-  SELECT COUNT(*) INTO total_iterations FROM umls_mrhier.lookup_pivot_crosstab_code;
-  for f in select ROW_NUMBER() OVER() AS iteration, pl.* from umls_mrhier.lookup_pivot_crosstab_code pl
+  SELECT COUNT(*) INTO total_iterations FROM nci_mrhier.lookup_pivot_crosstab_code;
+  for f in select ROW_NUMBER() OVER() AS iteration, pl.* from nci_mrhier.lookup_pivot_crosstab_code pl
   loop
     iteration := f.iteration;
     pivot_table := f.pivot_code_table;
@@ -3122,8 +3122,8 @@ BEGIN
 		
 	    EXECUTE
 	      format('
-	      INSERT INTO umls_mrhier.mrhier_code
-	      SELECT * FROM umls_mrhier.%s
+	      INSERT INTO nci_mrhier.mrhier_code
+	      SELECT * FROM nci_mrhier.%s
 	      ',
 	      pivot_table
 	      );
@@ -3134,28 +3134,28 @@ BEGIN
 		INTO stop_timestamp
 		;
 
-		SELECT get_umls_mth_dt()
+		SELECT get_nci_mth_dt()
 		INTO mth_date
 		;
 
-		EXECUTE format('SELECT COUNT(*) FROM umls_mrhier.%s;', 'MRHIER_CODE')
+		EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', 'MRHIER_CODE')
 		INTO target_rows;
 
-		EXECUTE format('SELECT COUNT(*) FROM umls_mrhier.%s;', source_table)
+		EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', source_table)
 		INTO source_rows;
 
 
 		EXECUTE
 		  format(
 		    '
-			INSERT INTO public.process_umls_mrhier_log
+			INSERT INTO public.process_nci_mrhier_log
 			VALUES (
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  NULL,
-			  ''umls_mrhier'',
+			  ''nci_mrhier'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
@@ -3213,7 +3213,7 @@ DECLARE
     processed_mrhier_ddl text;
     abs_max_ptr_level int;
 BEGIN
-	SELECT get_umls_mth_version()
+	SELECT get_nci_mth_version()
 	INTO mth_version;
 	
 	SELECT check_if_requires_processing(mth_version, source_table, target_table)
@@ -3228,16 +3228,16 @@ BEGIN
 		PERFORM notify_start('Writing MRHIER_STR_EXCL Table');
 		
 		
-		DROP TABLE IF EXISTS umls_mrhier.mrhier_str_excl;
-		CREATE TABLE umls_mrhier.mrhier_str_excl AS (
+		DROP TABLE IF EXISTS nci_mrhier.mrhier_str_excl;
+		CREATE TABLE nci_mrhier.mrhier_str_excl AS (
 			SELECT m1.*
-			FROM umls_mrhier.mrhier m1
-			LEFT JOIN umls_mrhier.mrhier_str m2
+			FROM nci_mrhier.mrhier m1
+			LEFT JOIN nci_mrhier.mrhier_str m2
 			ON m1.ptr_id = m2.ptr_id
 			WHERE
 			  m2.ptr_id IS NULL AND
 			  m1.ptr IS NOT NULL AND
-			  m1.sab IN (SELECT l.sab FROM umls_mrhier.lookup_eng l) AND
+			  m1.sab IN (SELECT l.sab FROM nci_mrhier.lookup_eng l) AND
 			  m1.sab <> 'SRC'
 			ORDER BY m1.sab DESC -- Arbitrarily in descending order to include SNOMEDCT_US first
 			)
@@ -3247,28 +3247,28 @@ BEGIN
 		INTO stop_timestamp
 		;
 
-		SELECT get_umls_mth_dt()
+		SELECT get_nci_mth_dt()
 		INTO mth_date
 		;
 
-		EXECUTE format('SELECT COUNT(*) FROM umls_mrhier.%s;', target_table)
+		EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', target_table)
 		INTO target_rows;
 
-		EXECUTE format('SELECT COUNT(*) FROM umls_mrhier.%s;', source_table)
+		EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', source_table)
 		INTO source_rows;
 
 
 		EXECUTE
 		  format(
 		    '
-			INSERT INTO public.process_umls_mrhier_log
+			INSERT INTO public.process_nci_mrhier_log
 			VALUES (
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  NULL,
-			  ''umls_mrhier'',
+			  ''nci_mrhier'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
@@ -3296,11 +3296,11 @@ $$
 
 
 /**************************************************************************
-/ IX. UMLS_CLASS Schema
+/ IX. NCI_CLASS Schema
 / -------------------------------------------------------------------------
-/ A fresh UMLS_CLASS schema is created with copies of the MRHIER, MRHIER_STR, 
+/ A fresh NCI_CLASS schema is created with copies of the MRHIER, MRHIER_STR, 
 / and MRHIER_STR_EXCL tables to section them off from the processing tables in the 
-/ UMLS_MRHIER schema with a corresponding SETUP_UMLS_CLASS_LOG log table in 
+/ NCI_MRHIER schema with a corresponding SETUP_NCI_CLASS_LOG log table in 
 / the public schema. 
 **************************************************************************/
 DO
@@ -3309,9 +3309,9 @@ DECLARE
 	log_timestamp timestamp;
 	mth_version varchar;
 	mth_release_dt varchar;
-	target_schema varchar := 'umls_class';
+	target_schema varchar := 'nci_class';
 	source_table varchar := NULL; 
-	target_table varchar := 'UMLS_CLASS Tables';
+	target_table varchar := 'NCI_CLASS Tables';
 	mrhier_rows bigint;
 	mrhier_str_rows bigint;
 	mrhier_code_rows bigint;
@@ -3322,7 +3322,7 @@ DECLARE
 	mth_date varchar;
 BEGIN
 
-	SELECT get_umls_mth_version()
+	SELECT get_nci_mth_version()
 	INTO mth_version;
 
 	SELECT check_if_requires_processing(mth_version, source_table, target_table)
@@ -3334,13 +3334,13 @@ BEGIN
 		INTO start_timestamp
 		;
 		
-		SELECT get_umls_mth_dt()
+		SELECT get_nci_mth_dt()
 		INTO mth_release_dt;
 		
-		PERFORM notify_start('writing umls_class schema');
+		PERFORM notify_start('writing nci_class schema');
 		
-		DROP TABLE IF EXISTS public.tmp_setup_umls_class_log;
-		CREATE TABLE IF NOT EXISTS public.tmp_setup_umls_class_log (
+		DROP TABLE IF EXISTS public.tmp_setup_nci_class_log;
+		CREATE TABLE IF NOT EXISTS public.tmp_setup_nci_class_log (
 		    mth_version character varying(255),
 		    mth_release_dt character varying(255),
 		    target_schema character varying(255),
@@ -3352,7 +3352,7 @@ BEGIN
 
 		EXECUTE
 		 format('
-		 INSERT INTO public.tmp_setup_umls_class_log(mth_version, mth_release_dt, target_schema)
+		 INSERT INTO public.tmp_setup_nci_class_log(mth_version, mth_release_dt, target_schema)
 		 VALUES (''%s'', ''%s'', ''%s'')
 		 ;
 		 ',
@@ -3361,29 +3361,29 @@ BEGIN
 		 	target_schema
 		 	);
 		 	
-		DROP SCHEMA umls_class CASCADE; 
-		CREATE SCHEMA umls_class; 
+		DROP SCHEMA nci_class CASCADE; 
+		CREATE SCHEMA nci_class; 
 		
 		PERFORM notify_start('copying MRHIER table'); 
 		
-		DROP TABLE IF EXISTS umls_class.mrhier;
-		CREATE TABLE umls_class.mrhier AS (
+		DROP TABLE IF EXISTS nci_class.mrhier;
+		CREATE TABLE nci_class.mrhier AS (
 		SELECT *
-		FROM umls_mrhier.mrhier
+		FROM nci_mrhier.mrhier
 		)
 		;
 		COMMIT;
 		
 		SELECT COUNT(*) 
 		INTO mrhier_rows 
-		FROM umls_class.mrhier;
+		FROM nci_class.mrhier;
 		
 		PERFORM notify_completion('copying MRHIER table');
 		
 		  EXECUTE
 		    format(
 		    '
-		    UPDATE public.tmp_setup_umls_class_log
+		    UPDATE public.tmp_setup_nci_class_log
 		    SET mrhier = %s
 		    WHERE mth_version = ''%s'';
 		    ',
@@ -3395,24 +3395,24 @@ BEGIN
 		  
 		PERFORM notify_start('copying MRHIER_STR table'); 
 		
-		DROP TABLE IF EXISTS umls_class.mrhier_str;
-		CREATE TABLE umls_class.mrhier_str AS (
+		DROP TABLE IF EXISTS nci_class.mrhier_str;
+		CREATE TABLE nci_class.mrhier_str AS (
 		SELECT *
-		FROM umls_mrhier.mrhier_str
+		FROM nci_mrhier.mrhier_str
 		)
 		;
 		COMMIT;
 		
 		SELECT COUNT(*) 
 		INTO mrhier_str_rows 
-		FROM umls_class.mrhier_str;
+		FROM nci_class.mrhier_str;
 		
 		PERFORM notify_completion('copying MRHIER_STR table');
 		
 		EXECUTE
 		    format(
 		    '
-		    UPDATE public.tmp_setup_umls_class_log
+		    UPDATE public.tmp_setup_nci_class_log
 		    SET mrhier_str = %s
 		    WHERE mth_version = ''%s'';
 		    ',
@@ -3423,24 +3423,24 @@ BEGIN
 
 		PERFORM notify_start('copying MRHIER_CODE table'); 
 		
-		DROP TABLE IF EXISTS umls_class.mrhier_code;
-		CREATE TABLE umls_class.mrhier_code AS (
+		DROP TABLE IF EXISTS nci_class.mrhier_code;
+		CREATE TABLE nci_class.mrhier_code AS (
 		SELECT *
-		FROM umls_mrhier.mrhier_code
+		FROM nci_mrhier.mrhier_code
 		)
 		;
 		COMMIT;
 		
 		SELECT COUNT(*) 
 		INTO mrhier_code_rows 
-		FROM umls_class.mrhier_code;
+		FROM nci_class.mrhier_code;
 		
 		PERFORM notify_completion('copying MRHIER_CODE table');
 		
 		EXECUTE
 		    format(
 		    '
-		    UPDATE public.tmp_setup_umls_class_log
+		    UPDATE public.tmp_setup_nci_class_log
 		    SET mrhier_code = %s
 		    WHERE mth_version = ''%s'';
 		    ',
@@ -3454,24 +3454,24 @@ BEGIN
 		 
 		PERFORM notify_start('copying MRHIER_STR_EXCL table');
 		
-	 	DROP TABLE IF EXISTS umls_class.mrhier_str_excl;
-		CREATE TABLE umls_class.mrhier_str_excl AS (
+	 	DROP TABLE IF EXISTS nci_class.mrhier_str_excl;
+		CREATE TABLE nci_class.mrhier_str_excl AS (
 		SELECT *
-		FROM umls_mrhier.mrhier_str_excl
+		FROM nci_mrhier.mrhier_str_excl
 		)
 		;
 		COMMIT;
 		
 		SELECT COUNT(*) 
 		INTO mrhier_str_excl_rows 
-		FROM umls_class.mrhier_str_excl;
+		FROM nci_class.mrhier_str_excl;
 		
 		PERFORM notify_completion('copying MRHIER_STR_EXCL table');
 		
 		EXECUTE
 		    format(
 		    '
-		    UPDATE public.tmp_setup_umls_class_log
+		    UPDATE public.tmp_setup_nci_class_log
 		    SET mrhier_str = %s
 		    WHERE mth_version = ''%s'';
 		    ',
@@ -3481,48 +3481,48 @@ BEGIN
 		 ;
 		
 		PERFORM notify_start('adding constraints');
-		ALTER TABLE umls_class.mrhier_str
+		ALTER TABLE nci_class.mrhier_str
 		ADD CONSTRAINT xpk_mrhier_str
 		PRIMARY KEY (ptr_id);
 		
-		CREATE INDEX x_mrhier_str_aui ON umls_class.mrhier_str(aui);
-		CREATE INDEX x_mrhier_str_code ON umls_class.mrhier_str(code);
+		CREATE INDEX x_mrhier_str_aui ON nci_class.mrhier_str(aui);
+		CREATE INDEX x_mrhier_str_code ON nci_class.mrhier_str(code);
 		
-		ALTER TABLE umls_class.mrhier_code
+		ALTER TABLE nci_class.mrhier_code
 		ADD CONSTRAINT xpk_mrhier_code
 		PRIMARY KEY (ptr_id);
 		
-		CREATE INDEX x_mrhier_code_aui ON umls_class.mrhier_code(aui);
-		CREATE INDEX x_mrhier_code_code ON umls_class.mrhier_code(code);
+		CREATE INDEX x_mrhier_code_aui ON nci_class.mrhier_code(aui);
+		CREATE INDEX x_mrhier_code_code ON nci_class.mrhier_code(code);
 		
 		
-		ALTER TABLE umls_class.mrhier_str_excl
+		ALTER TABLE nci_class.mrhier_str_excl
 		ADD CONSTRAINT xpk_mrhier_str_excl
 		PRIMARY KEY (ptr_id);
 		
-		CREATE INDEX x_mrhier_str_excl_aui ON umls_class.mrhier_str_excl(aui);
-		CREATE INDEX x_mrhier_str_excl_code ON umls_class.mrhier_str_excl(code);
-		CREATE INDEX x_mrhier_str_excl_sab ON umls_class.mrhier_str_excl(sab);
+		CREATE INDEX x_mrhier_str_excl_aui ON nci_class.mrhier_str_excl(aui);
+		CREATE INDEX x_mrhier_str_excl_code ON nci_class.mrhier_str_excl(code);
+		CREATE INDEX x_mrhier_str_excl_sab ON nci_class.mrhier_str_excl(sab);
 		 
 		PERFORM notify_completion('adding constraints');
 		
-		INSERT INTO public.setup_umls_class_log 
+		INSERT INTO public.setup_nci_class_log 
 		SELECT 
 		   TIMEOFDAY()::timestamp AS suc_datetime, 
 		   * 
-		FROM public.tmp_setup_umls_class_log
+		FROM public.tmp_setup_nci_class_log
 		; 
 		
-		DROP TABLE public.tmp_setup_umls_class_log;
+		DROP TABLE public.tmp_setup_nci_class_log;
 		COMMIT;
 		
-	    PERFORM notify_completion('writing umls_class schema');
+	    PERFORM notify_completion('writing nci_class schema');
 		 
 		SELECT get_log_timestamp()
 		INTO stop_timestamp
 		;
 
-		SELECT get_umls_mth_dt()
+		SELECT get_nci_mth_dt()
 		INTO mth_date
 		;
 
@@ -3531,14 +3531,14 @@ BEGIN
 		EXECUTE
 		  format(
 		    '
-			INSERT INTO public.process_umls_mrhier_log
+			INSERT INTO public.process_nci_mrhier_log
 			VALUES (
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  NULL,
-			  ''umls_mrhier'',
+			  ''nci_mrhier'',
 			  ''%s'',
 			  ''%s'',
 			   NULL,
@@ -3601,7 +3601,7 @@ DECLARE
     target_schema varchar(100) := 'rxclass';
     sr_datetime timestamp := TIMEOFDAY()::timestamp;
 BEGIN
-	SELECT get_umls_mth_version()
+	SELECT get_nci_mth_version()
 	INTO mth_version;
 	
 	source_table := '';
@@ -3617,14 +3617,14 @@ BEGIN
 		INTO start_timestamp
 		;
 	
-		DROP TABLE IF EXISTS umls_mrhier.lookup_rxclass;
-		CREATE TABLE umls_mrhier.lookup_rxclass (
+		DROP TABLE IF EXISTS nci_mrhier.lookup_rxclass;
+		CREATE TABLE nci_mrhier.lookup_rxclass (
 		rxclass_sab varchar(255) NOT NULL,
 		rxclass_abbr varchar(255) NOT NULL,
 		rxclass_code varchar(255) NOT NULL
 		);
 		
-		INSERT INTO umls_mrhier.lookup_rxclass
+		INSERT INTO nci_mrhier.lookup_rxclass
 		VALUES
 		  ('MED-RT', 'EPC', 'N0000189939'),
 		  ('MSH', 'MeSHPA', 'D020228'),
@@ -3645,7 +3645,7 @@ BEGIN
 		INTO stop_timestamp
 		;
 
-		SELECT get_umls_mth_dt()
+		SELECT get_nci_mth_dt()
 		INTO mth_date
 		;
 
@@ -3654,14 +3654,14 @@ BEGIN
 		EXECUTE
 		  format(
 		    '
-			INSERT INTO public.process_umls_mrhier_log
+			INSERT INTO public.process_nci_mrhier_log
 			VALUES (
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  NULL,
-			  ''umls_mrhier'',
+			  ''nci_mrhier'',
 			  ''%s'',
 			  ''%s'',
 			   NULL,
@@ -3691,11 +3691,11 @@ BEGIN
 		INTO start_timestamp
 		;
 	
-		DROP TABLE IF EXISTS umls_mrhier.lookup_rxclass_ext;
-		CREATE TABLE umls_mrhier.lookup_rxclass_ext AS (
+		DROP TABLE IF EXISTS nci_mrhier.lookup_rxclass_ext;
+		CREATE TABLE nci_mrhier.lookup_rxclass_ext AS (
 			SELECT DISTINCT ext.extended_table
 			FROM rxclass.lookup_rxclass l 
-			LEFT JOIN umls_mrhier.lookup_ext ext 
+			LEFT JOIN nci_mrhier.lookup_ext ext 
 			ON ext.hierarchy_sab = l.rxclass_sab 
 			ORDER BY ext.extended_table
 		);
@@ -3705,7 +3705,7 @@ BEGIN
 		INTO stop_timestamp
 		;
 
-		SELECT get_umls_mth_dt()
+		SELECT get_nci_mth_dt()
 		INTO mth_date
 		;
 
@@ -3714,14 +3714,14 @@ BEGIN
 		EXECUTE
 		  format(
 		    '
-			INSERT INTO public.process_umls_mrhier_log
+			INSERT INTO public.process_nci_mrhier_log
 			VALUES (
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  NULL,
-			  ''umls_mrhier'',
+			  ''nci_mrhier'',
 			  ''%s'',
 			  ''%s'',
 			   NULL,
@@ -3762,8 +3762,8 @@ BEGIN
 	        ptr_str text NOT NULL
 	    );
 		
-	    SELECT COUNT(*) INTO total_iterations FROM umls_mrhier.lookup_rxclass_ext;
-		for f in select ROW_NUMBER() OVER() AS iteration, l.* from umls_mrhier.lookup_rxclass_ext l
+	    SELECT COUNT(*) INTO total_iterations FROM nci_mrhier.lookup_rxclass_ext;
+		for f in select ROW_NUMBER() OVER() AS iteration, l.* from nci_mrhier.lookup_rxclass_ext l
 		  loop
 		    iteration := f.iteration;
 		    source_table := f.extended_table;
@@ -3775,7 +3775,7 @@ BEGIN
 		      format(
 		      '
 		      INSERT INTO rxclass.tmp_rxclass0 
-		      SELECT * FROM umls_mrhier.%s;
+		      SELECT * FROM nci_mrhier.%s;
 		      ',
 		      source_table
 		      );
@@ -3790,7 +3790,7 @@ BEGIN
 		CREATE TABLE rxclass.rxclass_ext as (
 		        SELECT DISTINCT l.*, t0.*
 		        FROM rxclass.tmp_rxclass0 t0
-		        INNER JOIN umls_mrhier.lookup_rxclass l
+		        INNER JOIN nci_mrhier.lookup_rxclass l
 		        ON l.rxclass_code = t0.ptr_code 
 		        ORDER BY 
 		          l.rxclass_sab, 
@@ -3805,7 +3805,7 @@ BEGIN
 		INTO stop_timestamp
 		;
 
-		SELECT get_umls_mth_dt()
+		SELECT get_nci_mth_dt()
 		INTO mth_date
 		;
 
@@ -3814,14 +3814,14 @@ BEGIN
 		EXECUTE
 		  format(
 		    '
-			INSERT INTO public.process_umls_mrhier_log
+			INSERT INTO public.process_nci_mrhier_log
 			VALUES (
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  NULL,
-			  ''umls_mrhier'',
+			  ''nci_mrhier'',
 			  ''%s'',
 			  ''%s'',
 			   NULL,
@@ -3855,7 +3855,7 @@ BEGIN
 		          t1.rxclass_code, 
 		          m.*
 		        FROM rxclass.rxclass_ext t1
-		        INNER JOIN umls_mrhier.mrhier_str m
+		        INNER JOIN nci_mrhier.mrhier_str m
 		        ON t1.ptr_id = m.ptr_id 
 		        ORDER BY 
 		          t1.rxclass_sab, 
@@ -3879,7 +3879,7 @@ BEGIN
 		INTO stop_timestamp
 		;
 
-		SELECT get_umls_mth_dt()
+		SELECT get_nci_mth_dt()
 		INTO mth_date
 		;
 
@@ -3888,14 +3888,14 @@ BEGIN
 		EXECUTE
 		  format(
 		    '
-			INSERT INTO public.process_umls_mrhier_log
+			INSERT INTO public.process_nci_mrhier_log
 			VALUES (
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  NULL,
-			  ''umls_mrhier'',
+			  ''nci_mrhier'',
 			  ''%s'',
 			  ''%s'',
 			   NULL,
@@ -3928,7 +3928,7 @@ BEGIN
 		          t1.rxclass_code, 
 		          m.*
 		        FROM rxclass.rxclass_ext t1
-		        INNER JOIN umls_mrhier.mrhier_code m
+		        INNER JOIN nci_mrhier.mrhier_code m
 		        ON t1.ptr_id = m.ptr_id 
 		        ORDER BY 
 		          t1.rxclass_sab, 
@@ -3951,7 +3951,7 @@ BEGIN
 		INTO stop_timestamp
 		;
 
-		SELECT get_umls_mth_dt()
+		SELECT get_nci_mth_dt()
 		INTO mth_date
 		;
 
@@ -3960,14 +3960,14 @@ BEGIN
 		EXECUTE
 		  format(
 		    '
-			INSERT INTO public.process_umls_mrhier_log
+			INSERT INTO public.process_nci_mrhier_log
 			VALUES (
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'',
 			  NULL,
-			  ''umls_mrhier'',
+			  ''nci_mrhier'',
 			  ''%s'',
 			  ''%s'',
 			   NULL,
@@ -4003,7 +4003,7 @@ BEGIN
 	  INTO rxclass_str_rows 
 	  FROM rxclass.rxclass_str;
 	  
-	  SELECT get_umls_mth_dt() 
+	  SELECT get_nci_mth_dt() 
 	  INTO mth_date;
 	  
 	  EXECUTE
@@ -4035,14 +4035,14 @@ BEGIN
 	    EXECUTE
 	    format(
 	        '
-		INSERT INTO public.process_umls_mrhier_log
+		INSERT INTO public.process_nci_mrhier_log
 		VALUES (
 		  ''%s'',
 		  ''%s'',
 		  ''%s'',
 		  ''%s'',
 		  NULL,
-		  ''umls_mrhier'',
+		  ''nci_mrhier'',
 		  ''%s'',
 		  ''%s'',
 		   NULL,
