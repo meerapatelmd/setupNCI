@@ -289,7 +289,6 @@ BEGIN
 
   		DROP SCHEMA IF EXISTS nci_mrhier CASCADE;
 		CREATE SCHEMA nci_mrhier;
-		COMMIT;
 
   		SELECT get_log_timestamp()
   		INTO start_timestamp
@@ -307,8 +306,8 @@ BEGIN
 			  c.STR,
 			  m.RELA,
 			  m.PTR
-			 FROM mth.mrhier m
-			 INNER JOIN mth.mrconso c
+			 FROM nci.mrhier m
+			 INNER JOIN nci.mrconso c
 			 ON c.aui = m.aui
 		);
 
@@ -346,7 +345,7 @@ BEGIN
 		INTO mth_date
 		;
 
-		SELECT get_row_count('mth.mrhier')
+		SELECT get_row_count('nci.mrhier')
 		INTO source_rows
 		;
 
@@ -426,7 +425,7 @@ BEGIN
 
 		INSERT INTO nci_mrhier.lookup_eng
 		SELECT DISTINCT sab
-		FROM mth.mrconso
+		FROM nci.mrconso
 		WHERE lat = 'ENG' ORDER BY sab;
 
 		PERFORM notify_completion('processing LOOKUP_ENG');
@@ -443,7 +442,7 @@ BEGIN
 		INTO mth_date
 		;
 
-		SELECT get_row_count('mth.mrconso')
+		SELECT get_row_count('nci.mrconso')
 		INTO source_rows
 		;
 
@@ -688,7 +687,7 @@ BEGIN
 			  WITH relatives0 AS (
 				SELECT DISTINCT m.ptr_id, s1.aui, s1.code, s1.str, m.rela, m.ptr
 				FROM nci_mrhier.mrhier m
-				INNER JOIN mth.mrconso s1
+				INNER JOIN nci.mrconso s1
 				ON s1.aui = m.aui
 				WHERE m.sab = ''%s''
 			  ),
@@ -704,7 +703,7 @@ BEGIN
 			  relatives3 AS (
 			  	SELECT r2.*, m.code AS ptr_code, m.str AS ptr_str
 			  	FROM relatives2 r2
-			  	LEFT JOIN mth.mrconso m
+			  	LEFT JOIN nci.mrconso m
 			  	ON m.aui = r2.ptr_aui
 			  )
 
