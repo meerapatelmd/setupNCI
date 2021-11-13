@@ -57,7 +57,8 @@ CREATE TABLE IF NOT EXISTS public.setup_nci_class_log (
     target_schema character varying(255),
     mrhier bigint,
     mrhier_str bigint,
-    mrhier_str_excl bigint
+    mrhier_str_excl bigint, 
+    mrhier_code bigint
 );
 
 /**************************************************************************
@@ -3040,7 +3041,7 @@ DECLARE
 	mth_version varchar;
 	mth_release_dt varchar;
 	target_schema varchar := 'nci_class';
-	source_table varchar := NULL; 
+	source_table varchar := ''; 
 	target_table varchar := 'NCI_CLASS Tables';
 	mrhier_rows bigint;
 	mrhier_str_rows bigint;
@@ -3256,8 +3257,6 @@ BEGIN
 		INTO mth_date
 		;
 
-
-
 		EXECUTE
 		  format(
 		    '
@@ -3268,7 +3267,7 @@ BEGIN
 			  ''%s'',
 			  ''%s'',
 			  NULL,
-			  ''nci_mrhier'',
+			  ''nci_class'',
 			  ''%s'',
 			  ''%s'',
 			   NULL,
