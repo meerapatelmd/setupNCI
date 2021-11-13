@@ -84,10 +84,16 @@ $$
 declare
 	nci_mth_version varchar;
 begin
-	SELECT sm_version
+	WITH ncim AS (
+	  SELECT * 
+	  FROM public.setup_nci_log 
+	  WHERE nci_type = 'Metathesaurus'
+	)
+	
+	SELECT nci_version
 	INTO nci_mth_version
-	FROM public.setup_mth_log
-	WHERE sm_datetime IN (SELECT MAX(sm_datetime) FROM public.setup_mth_log);
+	FROM ncim
+	WHERE sn_datetime IN (SELECT MAX(sn_datetime) FROM ncim);
 
   	RETURN nci_mth_version;
 END;
@@ -132,8 +138,7 @@ END;
 $$;
 
 
-DROP FUNCTION check_if_requires_processing(character varying,character varying,character varying);
-create or replace function check_if_requires_processing(nci_mth_version varchar, source_table varchar, target_table varchar)
+create or replace function check_if_nci_requires_processing(nci_mth_version varchar, source_table varchar, target_table varchar)
 returns boolean
 language plpgsql
 as
@@ -274,7 +279,7 @@ BEGIN
 	SELECT get_nci_mth_version()
 	INTO mth_version;
 
-	SELECT check_if_requires_processing(mth_version, 'MRHIER', 'MRHIER')
+	SELECT check_if_nci_requires_processing(mth_version, 'MRHIER', 'MRHIER')
 	INTO requires_processing;
 
   	IF requires_processing THEN
@@ -320,8 +325,6 @@ BEGIN
 		CREATE INDEX x_nci_mrhier_code ON nci_mrhier.mrhier(code);
 
 		DROP TABLE nci_mrhier.tmp_mrhier;
-		
-		COMMIT;
 
 		PERFORM notify_completion('processing MRHIER');
 
@@ -368,8 +371,6 @@ BEGIN
 			  source_rows,
 			  target_rows);
 			  
-		COMMIT;
-			  
 		PERFORM notify_timediff('processing MRHIER', start_timestamp, stop_timestamp);
 
 	END IF;
@@ -383,7 +384,6 @@ $$
 / `LOOKUP_ENG` is a single field of all SAB that have a LAT value of 'ENG' 
 / in the MRCONSO table. 
 **************************************************************************/
-
 
 DO
 $$
@@ -399,7 +399,7 @@ BEGIN
 	SELECT get_nci_mth_version()
 	INTO mth_version;
 
-	SELECT check_if_requires_processing(mth_version, 'MRCONSO', 'LOOKUP_ENG')
+	SELECT check_if_nci_requires_processing(mth_version, 'MRCONSO', 'LOOKUP_ENG')
 	INTO requires_processing;
 
   	IF requires_processing THEN
@@ -418,7 +418,8 @@ BEGIN
 		INSERT INTO nci_mrhier.lookup_eng
 		SELECT DISTINCT sab
 		FROM nci.mrconso
-		WHERE lat = 'ENG' ORDER BY sab;
+		WHERE lat = 'ENG' AND sab <> 'SNOMEDCT_US'
+		ORDER BY sab;
 
 		PERFORM notify_completion('processing LOOKUP_ENG');
 
@@ -499,7 +500,7 @@ BEGIN
 	SELECT get_nci_mth_version()
 	INTO mth_version;
 
-	SELECT check_if_requires_processing(mth_version, 'MRHIER', 'LOOKUP_PARSE')
+	SELECT check_if_nci_requires_processing(mth_version, 'MRHIER', 'LOOKUP_PARSE')
 	INTO requires_processing;
 
   	IF requires_processing THEN
@@ -636,7 +637,7 @@ BEGIN
 		target_table := f.hierarchy_table;
 		source_sab := f.hierarchy_sab;
 
-		SELECT check_if_requires_processing(mth_version, 'MRHIER', target_table)
+		SELECT check_if_nci_requires_processing(mth_version, 'MRHIER', target_table)
 		INTO requires_processing;
 
   		IF requires_processing THEN
@@ -828,7 +829,7 @@ BEGIN
 	SELECT get_nci_mth_version()
 	INTO mth_version;
 
-	SELECT check_if_requires_processing(mth_version, 'SNOMEDCT_US', 'LOOKUP_SNOMED')
+	SELECT check_if_nci_requires_processing(mth_version, 'SNOMEDCT_US', 'LOOKUP_SNOMED')
 	INTO requires_processing;
 
   	IF requires_processing THEN
@@ -954,7 +955,7 @@ BEGIN
 		root_str     := f.root_str;
 		root_aui     := f.root_aui;
 
-		SELECT check_if_requires_processing(mth_version, 'SNOMEDCT_US', target_table)
+		SELECT check_if_nci_requires_processing(mth_version, 'SNOMEDCT_US', target_table)
 		INTO requires_processing;
 
   		IF requires_processing THEN
@@ -1084,7 +1085,7 @@ BEGIN
 	SELECT get_nci_mth_version()
 	INTO mth_version;
 
-	SELECT check_if_requires_processing(mth_version, 'LOOKUP_PARSE', 'LOOKUP_EXT')
+	SELECT check_if_nci_requires_processing(mth_version, 'LOOKUP_PARSE', 'LOOKUP_EXT')
 	INTO requires_processing;
 
   	IF requires_processing THEN
@@ -1208,7 +1209,7 @@ BEGIN
 		source_rows  := f.count;
 		sab          := f.hierarchy_sab;
 
-		SELECT check_if_requires_processing(mth_version, source_table, target_table)
+		SELECT check_if_nci_requires_processing(mth_version, source_table, target_table)
 		INTO requires_processing;
 
   		IF requires_processing THEN
@@ -1356,7 +1357,7 @@ BEGIN
 	SELECT get_nci_mth_version()
 	INTO mth_version;
 
-	SELECT check_if_requires_processing(mth_version, 'LOOKUP_EXT', 'LOOKUP_PIVOT_TABLES')
+	SELECT check_if_nci_requires_processing(mth_version, 'LOOKUP_EXT', 'LOOKUP_PIVOT_TABLES')
 	INTO requires_processing;
 
   	IF requires_processing THEN
@@ -1462,7 +1463,7 @@ BEGIN
 	SELECT get_nci_mth_version()
 	INTO mth_version;
 	
-	SELECT check_if_requires_processing(mth_version, 'LOOKUP_PIVOT_TABLES', 'LOOKUP_PIVOT_CROSSTAB')
+	SELECT check_if_nci_requires_processing(mth_version, 'LOOKUP_PIVOT_TABLES', 'LOOKUP_PIVOT_CROSSTAB')
 	INTO requires_processing; 
 	
 	IF requires_processing THEN 
@@ -1540,7 +1541,7 @@ BEGIN
 		source_rows  := f.count;
 		sab          := f.hierarchy_sab;
 
-		SELECT check_if_requires_processing(mth_version, source_table, 'LOOKUP_PIVOT_CROSSTAB')
+		SELECT check_if_nci_requires_processing(mth_version, source_table, 'LOOKUP_PIVOT_CROSSTAB')
 		INTO requires_processing;
 
   		IF requires_processing THEN
@@ -1695,7 +1696,7 @@ BEGIN
 		
 		PERFORM notify_iteration(iteration, total_iterations, source_table || ' --> ' || target_table);
 
-		SELECT check_if_requires_processing(mth_version, source_table, target_table)
+		SELECT check_if_nci_requires_processing(mth_version, source_table, target_table)
 		INTO requires_processing;
 
   		IF requires_processing THEN
@@ -1818,7 +1819,7 @@ BEGIN
 	SELECT get_nci_mth_version()
 	INTO mth_version;
 
-	SELECT check_if_requires_processing(mth_version, 'LOOKUP_EXT', 'LOOKUP_PIVOT_TABLES_CODE')
+	SELECT check_if_nci_requires_processing(mth_version, 'LOOKUP_EXT', 'LOOKUP_PIVOT_TABLES_CODE')
 	INTO requires_processing;
 
   	IF requires_processing THEN
@@ -1922,7 +1923,7 @@ BEGIN
 	SELECT get_nci_mth_version()
 	INTO mth_version;
 	
-	SELECT check_if_requires_processing(mth_version, 'LOOKUP_PIVOT_TABLES_CODE', 'LOOKUP_PIVOT_CROSSTAB_CODE')
+	SELECT check_if_nci_requires_processing(mth_version, 'LOOKUP_PIVOT_TABLES_CODE', 'LOOKUP_PIVOT_CROSSTAB_CODE')
 	INTO requires_processing; 
 	
 	IF requires_processing THEN 
@@ -2000,7 +2001,7 @@ BEGIN
 		source_rows  := f.count;
 		sab          := f.hierarchy_sab;
 
-		SELECT check_if_requires_processing(mth_version, source_table, 'LOOKUP_PIVOT_CROSSTAB_CODE')
+		SELECT check_if_nci_requires_processing(mth_version, source_table, 'LOOKUP_PIVOT_CROSSTAB_CODE')
 		INTO requires_processing;
 
   		IF requires_processing THEN
@@ -2156,7 +2157,7 @@ BEGIN
 		
 		PERFORM notify_iteration(iteration, total_iterations, source_table || ' --> ' || target_table);
 
-		SELECT check_if_requires_processing(mth_version, source_table, target_table)
+		SELECT check_if_nci_requires_processing(mth_version, source_table, target_table)
 		INTO requires_processing;
 
   		IF requires_processing THEN
@@ -2295,7 +2296,7 @@ BEGIN
 	SELECT get_nci_mth_version()
 	INTO mth_version;
 	
-	SELECT check_if_requires_processing(mth_version, 'LOOKUP_EXT', 'LOOKUP_MRHIER_ABS_MAX')
+	SELECT check_if_nci_requires_processing(mth_version, 'LOOKUP_EXT', 'LOOKUP_MRHIER_ABS_MAX')
 	INTO requires_processing; 
 	
 	IF requires_processing THEN 
@@ -2365,7 +2366,7 @@ BEGIN
 		
 		PERFORM notify_iteration(iteration, total_iterations, source_table || ' --> ' || target_table);
 
-		SELECT check_if_requires_processing(mth_version, source_table, target_table)
+		SELECT check_if_nci_requires_processing(mth_version, source_table, target_table)
 		INTO requires_processing;
 
   		IF requires_processing THEN
@@ -2477,7 +2478,7 @@ BEGIN
 	SELECT get_nci_mth_version()
 	INTO mth_version;
 	
-	SELECT check_if_requires_processing(mth_version, 'LOOKUP_MRHIER_ABS_MAX', 'LOOKUP_MRHIER_DDL')
+	SELECT check_if_nci_requires_processing(mth_version, 'LOOKUP_MRHIER_ABS_MAX', 'LOOKUP_MRHIER_DDL')
 	INTO requires_processing; 
 	
 	IF requires_processing THEN 
@@ -2559,7 +2560,7 @@ BEGIN
 		  
 	END IF;
 	
-	SELECT check_if_requires_processing(mth_version, 'LOOKUP_MRHIER_DDL', 'MRHIER_STR')
+	SELECT check_if_nci_requires_processing(mth_version, 'LOOKUP_MRHIER_DDL', 'MRHIER_STR')
 	INTO requires_processing; 
 	
 	IF requires_processing THEN 
@@ -2645,7 +2646,7 @@ BEGIN
     
 	PERFORM notify_iteration(iteration, total_iterations, source_table || ' --> ' || target_table);
 
-	SELECT check_if_requires_processing(mth_version, source_table, target_table)
+	SELECT check_if_nci_requires_processing(mth_version, source_table, target_table)
 	INTO requires_processing;
 
   	IF requires_processing THEN
@@ -2752,7 +2753,7 @@ BEGIN
 	SELECT get_nci_mth_version()
 	INTO mth_version;
 	
-	SELECT check_if_requires_processing(mth_version, 'LOOKUP_EXT', 'LOOKUP_MRHIER_ABS_MAX')
+	SELECT check_if_nci_requires_processing(mth_version, 'LOOKUP_EXT', 'LOOKUP_MRHIER_ABS_MAX')
 	INTO requires_processing; 
 	
 	IF requires_processing THEN 
@@ -2820,7 +2821,7 @@ BEGIN
 		
 		PERFORM notify_iteration(iteration, total_iterations, source_table || ' --> ' || target_table);
 
-		SELECT check_if_requires_processing(mth_version, source_table, target_table)
+		SELECT check_if_nci_requires_processing(mth_version, source_table, target_table)
 		INTO requires_processing;
 
   		IF requires_processing THEN
@@ -2932,7 +2933,7 @@ BEGIN
 	SELECT get_nci_mth_version()
 	INTO mth_version;
 	
-	SELECT check_if_requires_processing(mth_version, 'LOOKUP_MRHIER_ABS_MAX', 'LOOKUP_MRHIER_DDL_CODE')
+	SELECT check_if_nci_requires_processing(mth_version, 'LOOKUP_MRHIER_ABS_MAX', 'LOOKUP_MRHIER_DDL_CODE')
 	INTO requires_processing; 
 	
 	IF requires_processing THEN 
@@ -3014,7 +3015,7 @@ BEGIN
 		  
 	END IF;
 	
-	SELECT check_if_requires_processing(mth_version, 'LOOKUP_MRHIER_DDL_CODE', 'MRHIER_CODE')
+	SELECT check_if_nci_requires_processing(mth_version, 'LOOKUP_MRHIER_DDL_CODE', 'MRHIER_CODE')
 	INTO requires_processing; 
 	
 	IF requires_processing THEN 
@@ -3100,7 +3101,7 @@ BEGIN
     
 	PERFORM notify_iteration(iteration, total_iterations, source_table || ' --> ' || target_table);
 
-	SELECT check_if_requires_processing(mth_version, source_table, target_table)
+	SELECT check_if_nci_requires_processing(mth_version, source_table, target_table)
 	INTO requires_processing;
 
   	IF requires_processing THEN
@@ -3207,7 +3208,7 @@ BEGIN
 	SELECT get_nci_mth_version()
 	INTO mth_version;
 	
-	SELECT check_if_requires_processing(mth_version, source_table, target_table)
+	SELECT check_if_nci_requires_processing(mth_version, source_table, target_table)
 	INTO requires_processing; 
 	
 	IF requires_processing THEN 
@@ -3316,7 +3317,7 @@ BEGIN
 	SELECT get_nci_mth_version()
 	INTO mth_version;
 
-	SELECT check_if_requires_processing(mth_version, source_table, target_table)
+	SELECT check_if_nci_requires_processing(mth_version, source_table, target_table)
 	INTO requires_processing; 
 	
 	IF requires_processing THEN 
