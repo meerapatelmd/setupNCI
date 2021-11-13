@@ -51,14 +51,14 @@ CREATE TABLE IF NOT EXISTS public.process_nci_mrhier_log (
 
 
 CREATE TABLE IF NOT EXISTS public.setup_nci_class_log (
-    suc_datetime timestamp without time zone,
-    mth_version character varying(255),
-    mth_release_dt character varying(255),
+    snc_datetime timestamp without time zone,
+    nci_mth_version character varying(255),
+    nci_mth_release_dt character varying(255),
     target_schema character varying(255),
-    mrhier bigint,
-    mrhier_str bigint,
-    mrhier_str_excl bigint, 
-    mrhier_code bigint
+    nci_mrhier bigint,
+    nci_mrhier_str bigint,
+    nci_mrhier_str_excl bigint, 
+    nci_mrhier_code bigint
 );
 
 /**************************************************************************
@@ -3072,18 +3072,18 @@ BEGIN
 		
 		DROP TABLE IF EXISTS public.tmp_setup_nci_class_log;
 		CREATE TABLE IF NOT EXISTS public.tmp_setup_nci_class_log (
-		    mth_version character varying(255),
-		    mth_release_dt character varying(255),
+		    nci_mth_version character varying(255),
+		    nci_mth_release_dt character varying(255),
 		    target_schema character varying(255),
-		    mrhier bigint,
-		    mrhier_str bigint,
-		    mrhier_str_excl bigint,
-		    mrhier_code bigint
+		    nci_mrhier bigint,
+		    nci_mrhier_str bigint,
+		    nci_mrhier_str_excl bigint,
+		    nci_mrhier_code bigint
 		);
 
 		EXECUTE
 		 format('
-		 INSERT INTO public.tmp_setup_nci_class_log(mth_version, mth_release_dt, target_schema)
+		 INSERT INTO public.tmp_setup_nci_class_log(nci_mth_version, nci_mth_release_dt, target_schema)
 		 VALUES (''%s'', ''%s'', ''%s'')
 		 ;
 		 ',
@@ -3115,8 +3115,8 @@ BEGIN
 		    format(
 		    '
 		    UPDATE public.tmp_setup_nci_class_log
-		    SET mrhier = %s
-		    WHERE mth_version = ''%s'';
+		    SET nci_mrhier = %s
+		    WHERE nci_mth_version = ''%s'';
 		    ',
 		    mrhier_rows,
 		    mth_version
@@ -3144,8 +3144,8 @@ BEGIN
 		    format(
 		    '
 		    UPDATE public.tmp_setup_nci_class_log
-		    SET mrhier_str = %s
-		    WHERE mth_version = ''%s'';
+		    SET nci_mrhier_str = %s
+		    WHERE nci_mth_version = ''%s'';
 		    ',
 		    mrhier_str_rows,
 		    mth_version
@@ -3172,8 +3172,8 @@ BEGIN
 		    format(
 		    '
 		    UPDATE public.tmp_setup_nci_class_log
-		    SET mrhier_code = %s
-		    WHERE mth_version = ''%s'';
+		    SET nci_mrhier_code = %s
+		    WHERE nci_mth_version = ''%s'';
 		    ',
 		    mrhier_code_rows,
 		    mth_version
@@ -3203,8 +3203,8 @@ BEGIN
 		    format(
 		    '
 		    UPDATE public.tmp_setup_nci_class_log
-		    SET mrhier_str = %s
-		    WHERE mth_version = ''%s'';
+		    SET nci_mrhier_str = %s
+		    WHERE nci_mth_version = ''%s'';
 		    ',
 		    mrhier_str_excl_rows,
 		    mth_version
@@ -3239,9 +3239,15 @@ BEGIN
 		
 		INSERT INTO public.setup_nci_class_log 
 		SELECT 
-		   TIMEOFDAY()::timestamp AS suc_datetime, 
-		   * 
-		FROM public.tmp_setup_nci_class_log
+		   TIMEOFDAY()::timestamp AS snc_datetime, 
+		   log.nci_mth_version, 
+		   log.nci_mth_release_dt, 
+		   log.target_schema, 
+		   log.nci_mrhier, 
+		   log.nci_mrhier_str, 
+		   log.nci_mrhier_str_excl, 
+		   log.nci_mrhier_code
+		FROM public.tmp_setup_nci_class_log log
 		; 
 		
 		DROP TABLE public.tmp_setup_nci_class_log;
