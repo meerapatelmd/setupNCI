@@ -386,7 +386,6 @@ $$
 / `LOOKUP_ENG` is a single field of all SAB that have a LAT value of 'ENG' 
 / in the MRCONSO table. 
 **************************************************************************/
-
 DO
 $$
 DECLARE
@@ -750,7 +749,7 @@ BEGIN
 			  	target_table
 			  	);
 			  	
-			 -- COMMIT;
+		COMMIT;
 			  
 
 
@@ -798,8 +797,7 @@ BEGIN
 			  target_table,
 			  source_rows,
 			  target_rows);
-			  
-		-- COMMIT;
+
 		
 		PERFORM notify_timediff(CONCAT('processing', ' ', source_sab, ' into table ', target_table), start_timestamp, stop_timestamp);
 	END IF;
@@ -3214,27 +3212,27 @@ BEGIN
 		
 		PERFORM notify_start('adding constraints');
 		ALTER TABLE nci_class.nci_mrhier_str
-		ADD CONSTRAINT xpk_mrhier_str
+		ADD CONSTRAINT xpk_nci_mrhier_str
 		PRIMARY KEY (ptr_id);
 		
-		CREATE INDEX x_mrhier_str_aui ON nci_class.nci_mrhier_str(aui);
-		CREATE INDEX x_mrhier_str_code ON nci_class.nci_mrhier_str(code);
+		CREATE INDEX x_nci_mrhier_str_aui ON nci_class.nci_mrhier_str(aui);
+		CREATE INDEX x_nci_mrhier_str_code ON nci_class.nci_mrhier_str(code);
 		
 		ALTER TABLE nci_class.nci_mrhier_code
-		ADD CONSTRAINT xpk_mrhier_code
+		ADD CONSTRAINT xpk_nci_mrhier_code
 		PRIMARY KEY (ptr_id);
 		
-		CREATE INDEX x_mrhier_code_aui ON nci_class.nci_mrhier_code(aui);
-		CREATE INDEX x_mrhier_code_code ON nci_class.nci_mrhier_code(code);
+		CREATE INDEX x_nci_mrhier_code_aui ON nci_class.nci_mrhier_code(aui);
+		CREATE INDEX x_nci_mrhier_code_code ON nci_class.nci_mrhier_code(code);
 		
 		
 		ALTER TABLE nci_class.nci_mrhier_str_excl
-		ADD CONSTRAINT xpk_mrhier_str_excl
+		ADD CONSTRAINT xpk_nci_mrhier_str_excl
 		PRIMARY KEY (ptr_id);
 		
-		CREATE INDEX x_mrhier_str_excl_aui ON nci_class.nci_mrhier_str_excl(aui);
-		CREATE INDEX x_mrhier_str_excl_code ON nci_class.nci_mrhier_str_excl(code);
-		CREATE INDEX x_mrhier_str_excl_sab ON nci_class.nci_mrhier_str_excl(sab);
+		CREATE INDEX x_nci_mrhier_str_excl_aui ON nci_class.nci_mrhier_str_excl(aui);
+		CREATE INDEX x_nci_mrhier_str_excl_code ON nci_class.nci_mrhier_str_excl(code);
+		CREATE INDEX x_nci_mrhier_str_excl_sab ON nci_class.nci_mrhier_str_excl(sab);
 		 
 		PERFORM notify_completion('adding constraints');
 		
