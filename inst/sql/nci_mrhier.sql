@@ -7,20 +7,20 @@
 * Note: SNOMEDCT_US is excluded from processing due to its immense size while 
 * also being duplicative of the UMLS Metathesaurus MRHIER processing.
 *
-* | MRHIER | --> | MRHIER |
-* ptr_id is added to the source table. ptr_id is the source MRHIER's row number.
+* | MRHIER | --> | NCI_MRHIER |
+* ptr_id is added to the source table. ptr_id is the source NCI_MRHIER's row number.
 * It is added as an identifier for each unique AUI-RELA-PTR (ptr: Path To Root).
 * Note that unlike the identifiers provided
 * by the NCI, this one cannot be used across different Metathesaurus
 * versions.
 *
-* | MRHIER | --> | MRHIER_STR | + | MRHIER_STR_EXCL |
-* MRHIER is then processed to replace the decimal-separated `ptr` string into
+* | MRHIER | --> | NCI_MRHIER_STR | + | NCI_MRHIER_STR_EXCL |
+* NCI_MRHIER is then processed to replace the decimal-separated `ptr` string into
 * individual atoms (`aui`) and mapped to the atom's `str` value. Any missing
-* `ptr` values in `MRHIER_STR` are accounted for in the `MRHIER_STR_EXCL` table.
+* `ptr` values in `NCI_MRHIER_STR` are accounted for in the `NCI_MRHIER_STR_EXCL` table.
 *
 * To Do:
-* [ ] Add the `sab` field back to final MRHIER_STR table by doing a join 
+* [ ] Add the `sab` field back to final NCI_MRHIER_STR table by doing a join 
 *     to the MRCONSO table at this stage
 * [ ] Log entries from `ext_` to `pivot_` do not have `sab` value
 * [ ] Change sort order of final tables in NCI Class
@@ -31,7 +31,7 @@
 /**************************************************************************
 LOG TABLES
 Process log table logs the processing.
-Setup log table logs the final `MRHIER`, `MRHIER_STR`, and `MRHIER_STR_EXCL` tables.
+Setup log table logs the final `NCI_MRHIER`, `NCI_MRHIER_STR`, and `NCI_MRHIER_STR_EXCL` tables.
 Both are setup if it does not already exist.
 **************************************************************************/
 
@@ -262,7 +262,7 @@ $$
 / -------------------------------------------------------------------------
 / If the current NCI Metathesaurus version is not logged for
 / the transfer of the MRHIER table, the `nci_mrhier` schema is dropped.
-/ The unique AUI-RELA-PTR from the MRHIER table in the `mth` schema 
+/ The unique AUI-RELA-PTR from the NCI_MRHIER table in the `nci` schema 
 / is then copied to the along with the AUI's CODE, SAB and STR in the MRCONSO 
 / table. A `ptr_id` to serve as a unique identifier each row number, which 
 / represents a unique classification for the given AUI.
@@ -281,7 +281,7 @@ BEGIN
 	SELECT get_nci_mth_version()
 	INTO mth_version;
 
-	SELECT check_if_nci_requires_processing(mth_version, 'MRHIER', 'MRHIER')
+	SELECT check_if_nci_requires_processing(mth_version, 'MRHIER', 'NCI_MRHIER')
 	INTO requires_processing;
 
   	IF requires_processing THEN
@@ -311,20 +311,20 @@ BEGIN
 		);
 
 
-		DROP TABLE IF EXISTS nci_mrhier.mrhier;
-		CREATE TABLE nci_mrhier.mrhier AS (
+		DROP TABLE IF EXISTS nci_mrhier.nci_mrhier;
+		CREATE TABLE nci_mrhier.nci_mrhier AS (
 		   SELECT ROW_NUMBER() OVER() AS ptr_id, m.*
 		   FROM nci_mrhier.tmp_mrhier m
 		)
 		;
 
-		ALTER TABLE nci_mrhier.mrhier
+		ALTER TABLE nci_mrhier.nci_mrhier
 		ADD CONSTRAINT xpk_nci_mrhier
 		PRIMARY KEY (ptr_id);
 
-		CREATE INDEX x_nci_mrhier_sab ON nci_mrhier.mrhier(sab);
-		CREATE INDEX x_nci_mrhier_aui ON nci_mrhier.mrhier(aui);
-		CREATE INDEX x_nci_mrhier_code ON nci_mrhier.mrhier(code);
+		CREATE INDEX x_nci_mrhier_sab ON nci_mrhier.nci_mrhier(sab);
+		CREATE INDEX x_nci_mrhier_aui ON nci_mrhier.nci_mrhier(aui);
+		CREATE INDEX x_nci_mrhier_code ON nci_mrhier.nci_mrhier(code);
 
 		DROP TABLE nci_mrhier.tmp_mrhier;
 
@@ -346,7 +346,7 @@ BEGIN
 		INTO source_rows
 		;
 
-		SELECT get_row_count('nci_mrhier.mrhier')
+		SELECT get_row_count('nci_mrhier.nci_mrhier')
 		INTO target_rows
 		;
 
@@ -362,7 +362,7 @@ BEGIN
 			  NULL,
 			  ''nci_mrhier'',
 			  ''MRHIER'',
-			  ''MRHIER'',
+			  ''NCI_MRHIER'',
 			  ''%s'',
 			  ''%s'');
 			',
@@ -502,7 +502,7 @@ BEGIN
 	SELECT get_nci_mth_version()
 	INTO mth_version;
 
-	SELECT check_if_nci_requires_processing(mth_version, 'MRHIER', 'LOOKUP_PARSE')
+	SELECT check_if_nci_requires_processing(mth_version, 'NCI_MRHIER', 'LOOKUP_PARSE')
 	INTO requires_processing;
 
   	IF requires_processing THEN
@@ -525,7 +525,7 @@ BEGIN
 			    h.sab AS hierarchy_sab,
 			    sab_to_tablename(h.sab) AS hierarchy_table,
 			    COUNT(*)
-			  FROM nci_mrhier.mrhier h
+			  FROM nci_mrhier.nci_mrhier h
 			  INNER JOIN nci_mrhier.lookup_eng eng
 			  ON eng.sab = h.sab
 			  GROUP BY h.sab
@@ -556,7 +556,7 @@ BEGIN
 		INTO mth_date
 		;
 
-		SELECT get_row_count('nci_mrhier.mrhier')
+		SELECT get_row_count('nci_mrhier.nci_mrhier')
 		INTO source_rows
 		;
 
@@ -575,7 +575,7 @@ BEGIN
 			  ''%s'',
 			  NULL,
 			  ''nci_mrhier'',
-			  ''MRHIER'',
+			  ''NCI_MRHIER'',
 			  ''LOOKUP_PARSE'',
 			  ''%s'',
 			  ''%s'');
@@ -605,7 +605,7 @@ $$
 /**************************************************************************
 / III. PARSE PTR BY SAB ('parse')
 / -------------------------------------------------------------------------
-/ For each unique SAB in the MRHIER table,
+/ For each unique SAB in the NCI_MRHIER table,
 / the decimal-separated PTR string is parsed along with its
 / ordinality as PTR_LEVEL. The parsed individual PTR_AUI
 / is joined to MRCONSO to add the PTR_CODE and PTR. Each SAB is written to 
@@ -639,7 +639,7 @@ BEGIN
 		target_table := f.hierarchy_table;
 		source_sab := f.hierarchy_sab;
 
-		SELECT check_if_nci_requires_processing(mth_version, 'MRHIER', target_table)
+		SELECT check_if_nci_requires_processing(mth_version, 'NCI_MRHIER', target_table)
 		INTO requires_processing;
 
   		IF requires_processing THEN
@@ -653,7 +653,7 @@ BEGIN
 			format(
 				'
 				SELECT COUNT(*)
-				FROM nci_mrhier.mrhier
+				FROM nci_mrhier.nci_mrhier
 				WHERE sab = ''%s'';
 				',
 					source_sab
@@ -681,7 +681,7 @@ BEGIN
 
 			  WITH relatives0 AS (
 				SELECT DISTINCT m.ptr_id, s1.aui, s1.code, s1.str, m.rela, m.ptr
-				FROM nci_mrhier.mrhier m
+				FROM nci_mrhier.nci_mrhier m
 				INNER JOIN nci.mrconso s1
 				ON s1.aui = m.aui
 				WHERE m.sab = ''%s''
@@ -785,7 +785,7 @@ BEGIN
 			  ''%s'',
 			  ''%s'',
 			  ''nci_mrhier'',
-			  ''MRHIER'',
+			  ''NCI_MRHIER'',
 			  ''%s'',
 			  ''%s'',
 			  ''%s'');
@@ -2006,13 +2006,13 @@ $$
 
 
 /**************************************************************************
-/ VII. MRHIER_STR: UNION PIVOTED TABLES
+/ VII. NCI_MRHIER_STR: UNION PIVOTED TABLES
 / -------------------------------------------------------------------------
-/ A MRHIER_STR table is written that is a union of all the pivoted 
+/ A NCI_MRHIER_STR table is written that is a union of all the pivoted 
 / tables.
-/ The absolute maximum ptr level across the entire MRHIER
+/ The absolute maximum ptr level across the entire NCI_MRHIER
 / is derived to generate the DDL for the column names of the
-/ final MRHIER_STR table.
+/ final NCI_MRHIER_STR table.
 **************************************************************************/
 DO
 $$
@@ -2193,7 +2193,7 @@ $$
 
 
 
--- Write MRHIER_STR Table 
+-- Write NCI_MRHIER_STR Table 
 DO
 $$
 DECLARE
@@ -2300,7 +2300,7 @@ BEGIN
 		  
 	END IF;
 	
-	SELECT check_if_nci_requires_processing(mth_version, 'LOOKUP_MRHIER_DDL', 'MRHIER_STR')
+	SELECT check_if_nci_requires_processing(mth_version, 'LOOKUP_MRHIER_DDL', 'NCI_MRHIER_STR')
 	INTO requires_processing; 
 	
 	IF requires_processing THEN 
@@ -2316,8 +2316,8 @@ BEGIN
 	  EXECUTE
 	    format(
 	    '
-	    DROP TABLE IF EXISTS nci_mrhier.mrhier_str;
-	    CREATE TABLE nci_mrhier.mrhier_str (
+	    DROP TABLE IF EXISTS nci_mrhier.nci_mrhier_str;
+	    CREATE TABLE nci_mrhier.nci_mrhier_str (
 	      aui varchar(12),
 	      code text,
 	      str text,
@@ -2339,7 +2339,7 @@ BEGIN
 		INTO mth_date
 		;
 
-		EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', 'MRHIER_STR')
+		EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', 'NCI_MRHIER_STR')
 		INTO target_rows;
 
 		EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', 'LOOKUP_MRHIER_DDL')
@@ -2367,7 +2367,7 @@ BEGIN
 			  mth_version,
 			  mth_date,
 			  'LOOKUP_MRHIER_DDL',
-			  'MRHIER_STR',
+			  'NCI_MRHIER_STR',
 			  source_rows,
 			  target_rows);
 			  
@@ -2382,7 +2382,7 @@ BEGIN
     iteration := f.iteration;
     pivot_table := f.pivot_table;
     source_table := f.pivot_table;
-    target_table := 'MRHIER_STR';
+    target_table := 'NCI_MRHIER_STR';
     
 	PERFORM notify_iteration(iteration, total_iterations, source_table || ' --> ' || target_table);
 
@@ -2399,7 +2399,7 @@ BEGIN
 		
 	    EXECUTE
 	      format('
-	      INSERT INTO nci_mrhier.mrhier_str
+	      INSERT INTO nci_mrhier.nci_mrhier_str
 	      SELECT * FROM nci_mrhier.%s
 	      ',
 	      pivot_table
@@ -2415,7 +2415,7 @@ BEGIN
 		INTO mth_date
 		;
 
-		EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', 'MRHIER_STR')
+		EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', 'NCI_MRHIER_STR')
 		INTO target_rows;
 
 		EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', source_table)
@@ -2443,7 +2443,7 @@ BEGIN
 			  mth_version,
 			  mth_date,
 			  source_table,
-			  'MRHIER_STR',
+			  'NCI_MRHIER_STR',
 			  source_rows,
 			  target_rows);
 			  
@@ -2463,13 +2463,13 @@ $$
 
 
 /**************************************************************************
-/ VII. MRHIER_CODE: UNION PIVOTED TABLES
+/ VII. NCI_MRHIER_CODE: UNION PIVOTED TABLES
 / -------------------------------------------------------------------------
-/ A MRHIER_CODE table is written that is a union of all the pivoted 
+/ A NCI_MRHIER_CODE table is written that is a union of all the pivoted 
 / tables.
-/ The absolute maximum ptr level across the entire MRHIER
+/ The absolute maximum ptr level across the entire NCI_MRHIER
 / is derived to generate the DDL for the column names of the
-/ final MRHIER_CODE table.
+/ final NCI_MRHIER_CODE table.
 **************************************************************************/
 DO
 $$
@@ -2648,7 +2648,7 @@ $$
 
 
 
--- Write MRHIER_CODE Table 
+-- Write NCI_MRHIER_CODE Table 
 DO
 $$
 DECLARE
@@ -2755,7 +2755,7 @@ BEGIN
 		  
 	END IF;
 	
-	SELECT check_if_nci_requires_processing(mth_version, 'LOOKUP_MRHIER_DDL_CODE', 'MRHIER_CODE')
+	SELECT check_if_nci_requires_processing(mth_version, 'LOOKUP_MRHIER_DDL_CODE', 'NCI_MRHIER_CODE')
 	INTO requires_processing; 
 	
 	IF requires_processing THEN 
@@ -2771,8 +2771,8 @@ BEGIN
 	  EXECUTE
 	    format(
 	    '
-	    DROP TABLE IF EXISTS nci_mrhier.mrhier_code;
-	    CREATE TABLE nci_mrhier.mrhier_code (
+	    DROP TABLE IF EXISTS nci_mrhier.nci_mrhier_code;
+	    CREATE TABLE nci_mrhier.nci_mrhier_code (
 	      aui varchar(12),
 	      code text,
 	      str text,
@@ -2794,7 +2794,7 @@ BEGIN
 		INTO mth_date
 		;
 
-		EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', 'MRHIER_CODE')
+		EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', 'NCI_MRHIER_CODE')
 		INTO target_rows;
 
 		EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', 'LOOKUP_MRHIER_DDL_CODE')
@@ -2822,7 +2822,7 @@ BEGIN
 			  mth_version,
 			  mth_date,
 			  'LOOKUP_MRHIER_DDL_CODE',
-			  'MRHIER_CODE',
+			  'NCI_MRHIER_CODE',
 			  source_rows,
 			  target_rows);
 			  
@@ -2837,7 +2837,7 @@ BEGIN
     iteration := f.iteration;
     pivot_table := f.pivot_code_table;
     source_table := f.pivot_code_table;
-    target_table := 'MRHIER_CODE';
+    target_table := 'NCI_MRHIER_CODE';
     
 	PERFORM notify_iteration(iteration, total_iterations, source_table || ' --> ' || target_table);
 
@@ -2854,7 +2854,7 @@ BEGIN
 		
 	    EXECUTE
 	      format('
-	      INSERT INTO nci_mrhier.mrhier_code
+	      INSERT INTO nci_mrhier.nci_mrhier_code
 	      SELECT * FROM nci_mrhier.%s
 	      ',
 	      pivot_table
@@ -2870,7 +2870,7 @@ BEGIN
 		INTO mth_date
 		;
 
-		EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', 'MRHIER_CODE')
+		EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', 'NCI_MRHIER_CODE')
 		INTO target_rows;
 
 		EXECUTE format('SELECT COUNT(*) FROM nci_mrhier.%s;', source_table)
@@ -2898,7 +2898,7 @@ BEGIN
 			  mth_version,
 			  mth_date,
 			  source_table,
-			  'MRHIER_CODE',
+			  'NCI_MRHIER_CODE',
 			  source_rows,
 			  target_rows);
 			  
@@ -2918,10 +2918,10 @@ $$
 
 
 /**************************************************************************
-/ VIII. MRHIER_STR_EXCL: EXCLUDED PATH TO ROOT VALUES
+/ VIII. NCI_MRHIER_STR_EXCL: EXCLUDED PATH TO ROOT VALUES
 / -------------------------------------------------------------------------
-/ Table that includes any source MRHIER `ptr` that did not make it
-/ to the `MRHIER_STR` table. Only vocabularies where `LAT = 'ENG'` and not 'SRC' 
+/ Table that includes any source NCI_MRHIER `ptr` that did not make it
+/ to the `NCI_MRHIER_STR` table. Only vocabularies where `LAT = 'ENG'` and not 'SRC' 
 / in the MRCONSO table are included.  
 **************************************************************************/
 DO
@@ -2937,8 +2937,8 @@ DECLARE
 	target_rows bigint;
     f record;
     sab varchar(100);
-    source_table varchar(255) := 'MRHIER';
-    target_table varchar(255) := 'MRHIER_STR_EXCL';
+    source_table varchar(255) := 'NCI_MRHIER';
+    target_table varchar(255) := 'NCI_MRHIER_STR_EXCL';
     pivot_table varchar(255);
 	iteration int;
     total_iterations int;
@@ -2957,14 +2957,14 @@ BEGIN
 		INTO start_timestamp
 		;
 		
-		PERFORM notify_start('Writing MRHIER_STR_EXCL Table');
+		PERFORM notify_start('Writing NCI_MRHIER_STR_EXCL Table');
 		
 		
-		DROP TABLE IF EXISTS nci_mrhier.mrhier_str_excl;
-		CREATE TABLE nci_mrhier.mrhier_str_excl AS (
+		DROP TABLE IF EXISTS nci_mrhier.nci_mrhier_str_excl;
+		CREATE TABLE nci_mrhier.nci_mrhier_str_excl AS (
 			SELECT m1.*
-			FROM nci_mrhier.mrhier m1
-			LEFT JOIN nci_mrhier.mrhier_str m2
+			FROM nci_mrhier.nci_mrhier m1
+			LEFT JOIN nci_mrhier.nci_mrhier_str m2
 			ON m1.ptr_id = m2.ptr_id
 			WHERE
 			  m2.ptr_id IS NULL AND
@@ -3018,7 +3018,7 @@ BEGIN
 			COMMIT;
 			
 			
-			PERFORM notify_timediff('Writing MRHIER_STR_EXCL table', start_timestamp, stop_timestamp);
+			PERFORM notify_timediff('Writing NCI_MRHIER_STR_EXCL table', start_timestamp, stop_timestamp);
 	
 	END IF; 
 	
@@ -3030,8 +3030,8 @@ $$
 /**************************************************************************
 / IX. NCI_CLASS Schema
 / -------------------------------------------------------------------------
-/ A fresh NCI_CLASS schema is created with copies of the MRHIER, MRHIER_STR, 
-/ and MRHIER_STR_EXCL tables to section them off from the processing tables in the 
+/ A fresh NCI_CLASS schema is created with copies of the NCI_MRHIER, NCI_MRHIER_STR, 
+/ and NCI_MRHIER_STR_EXCL tables to section them off from the processing tables in the 
 / NCI_MRHIER schema with a corresponding SETUP_NCI_CLASS_LOG log table in 
 / the public schema. 
 **************************************************************************/
@@ -3096,21 +3096,21 @@ BEGIN
 		DROP SCHEMA nci_class CASCADE; 
 		CREATE SCHEMA nci_class; 
 		
-		PERFORM notify_start('copying MRHIER table'); 
+		PERFORM notify_start('copying NCI_MRHIER table'); 
 		
-		DROP TABLE IF EXISTS nci_class.mrhier;
-		CREATE TABLE nci_class.mrhier AS (
+		DROP TABLE IF EXISTS nci_class.nci_mrhier;
+		CREATE TABLE nci_class.nci_mrhier AS (
 		SELECT *
-		FROM nci_mrhier.mrhier
+		FROM nci_mrhier.nci_mrhier
 		)
 		;
 		COMMIT;
 		
 		SELECT COUNT(*) 
 		INTO mrhier_rows 
-		FROM nci_class.mrhier;
+		FROM nci_class.nci_mrhier;
 		
-		PERFORM notify_completion('copying MRHIER table');
+		PERFORM notify_completion('copying NCI_MRHIER table');
 		
 		  EXECUTE
 		    format(
@@ -3125,21 +3125,21 @@ BEGIN
 		  ;
 		  COMMIT;
 		  
-		PERFORM notify_start('copying MRHIER_STR table'); 
+		PERFORM notify_start('copying NCI_MRHIER_STR table'); 
 		
-		DROP TABLE IF EXISTS nci_class.mrhier_str;
-		CREATE TABLE nci_class.mrhier_str AS (
+		DROP TABLE IF EXISTS nci_class.nci_mrhier_str;
+		CREATE TABLE nci_class.nci_mrhier_str AS (
 		SELECT *
-		FROM nci_mrhier.mrhier_str
+		FROM nci_mrhier.nci_mrhier_str
 		)
 		;
 		COMMIT;
 		
 		SELECT COUNT(*) 
 		INTO mrhier_str_rows 
-		FROM nci_class.mrhier_str;
+		FROM nci_class.nci_mrhier_str;
 		
-		PERFORM notify_completion('copying MRHIER_STR table');
+		PERFORM notify_completion('copying NCI_MRHIER_STR table');
 		
 		EXECUTE
 		    format(
@@ -3153,21 +3153,21 @@ BEGIN
 		    )
 		 ;
 
-		PERFORM notify_start('copying MRHIER_CODE table'); 
+		PERFORM notify_start('copying NCI_MRHIER_CODE table'); 
 		
-		DROP TABLE IF EXISTS nci_class.mrhier_code;
-		CREATE TABLE nci_class.mrhier_code AS (
+		DROP TABLE IF EXISTS nci_class.nci_mrhier_code;
+		CREATE TABLE nci_class.nci_mrhier_code AS (
 		SELECT *
-		FROM nci_mrhier.mrhier_code
+		FROM nci_mrhier.nci_mrhier_code
 		)
 		;
 		COMMIT;
 		
 		SELECT COUNT(*) 
 		INTO mrhier_code_rows 
-		FROM nci_class.mrhier_code;
+		FROM nci_class.nci_mrhier_code;
 		
-		PERFORM notify_completion('copying MRHIER_CODE table');
+		PERFORM notify_completion('copying NCI_MRHIER_CODE table');
 		
 		EXECUTE
 		    format(
@@ -3184,21 +3184,21 @@ BEGIN
 
 
 		 
-		PERFORM notify_start('copying MRHIER_STR_EXCL table');
+		PERFORM notify_start('copying NCI_MRHIER_STR_EXCL table');
 		
-	 	DROP TABLE IF EXISTS nci_class.mrhier_str_excl;
-		CREATE TABLE nci_class.mrhier_str_excl AS (
+	 	DROP TABLE IF EXISTS nci_class.nci_mrhier_str_excl;
+		CREATE TABLE nci_class.nci_mrhier_str_excl AS (
 		SELECT *
-		FROM nci_mrhier.mrhier_str_excl
+		FROM nci_mrhier.nci_mrhier_str_excl
 		)
 		;
 		COMMIT;
 		
 		SELECT COUNT(*) 
 		INTO mrhier_str_excl_rows 
-		FROM nci_class.mrhier_str_excl;
+		FROM nci_class.nci_mrhier_str_excl;
 		
-		PERFORM notify_completion('copying MRHIER_STR_EXCL table');
+		PERFORM notify_completion('copying NCI_MRHIER_STR_EXCL table');
 		
 		EXECUTE
 		    format(
@@ -3213,28 +3213,28 @@ BEGIN
 		 ;
 		
 		PERFORM notify_start('adding constraints');
-		ALTER TABLE nci_class.mrhier_str
+		ALTER TABLE nci_class.nci_mrhier_str
 		ADD CONSTRAINT xpk_mrhier_str
 		PRIMARY KEY (ptr_id);
 		
-		CREATE INDEX x_mrhier_str_aui ON nci_class.mrhier_str(aui);
-		CREATE INDEX x_mrhier_str_code ON nci_class.mrhier_str(code);
+		CREATE INDEX x_mrhier_str_aui ON nci_class.nci_mrhier_str(aui);
+		CREATE INDEX x_mrhier_str_code ON nci_class.nci_mrhier_str(code);
 		
-		ALTER TABLE nci_class.mrhier_code
+		ALTER TABLE nci_class.nci_mrhier_code
 		ADD CONSTRAINT xpk_mrhier_code
 		PRIMARY KEY (ptr_id);
 		
-		CREATE INDEX x_mrhier_code_aui ON nci_class.mrhier_code(aui);
-		CREATE INDEX x_mrhier_code_code ON nci_class.mrhier_code(code);
+		CREATE INDEX x_mrhier_code_aui ON nci_class.nci_mrhier_code(aui);
+		CREATE INDEX x_mrhier_code_code ON nci_class.nci_mrhier_code(code);
 		
 		
-		ALTER TABLE nci_class.mrhier_str_excl
+		ALTER TABLE nci_class.nci_mrhier_str_excl
 		ADD CONSTRAINT xpk_mrhier_str_excl
 		PRIMARY KEY (ptr_id);
 		
-		CREATE INDEX x_mrhier_str_excl_aui ON nci_class.mrhier_str_excl(aui);
-		CREATE INDEX x_mrhier_str_excl_code ON nci_class.mrhier_str_excl(code);
-		CREATE INDEX x_mrhier_str_excl_sab ON nci_class.mrhier_str_excl(sab);
+		CREATE INDEX x_mrhier_str_excl_aui ON nci_class.nci_mrhier_str_excl(aui);
+		CREATE INDEX x_mrhier_str_excl_code ON nci_class.nci_mrhier_str_excl(code);
+		CREATE INDEX x_mrhier_str_excl_sab ON nci_class.nci_mrhier_str_excl(sab);
 		 
 		PERFORM notify_completion('adding constraints');
 		
