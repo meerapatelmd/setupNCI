@@ -3,6 +3,9 @@
 * Authors: Meera Patel
 * Date: 2021-10-27
 * https://lucid.app/lucidchart/f68b0a0a-104c-4550-bc38-455efda9ee25/edit?viewport_loc=-776%2C-93%2C2719%2C1620%2C0_0&invitationId=inv_e6984473-d151-4be5-8302-86fa64f4865c
+* 
+* Note: SNOMEDCT_US is excluded from processing due to its immense size while 
+* also being duplicative of the UMLS Metathesaurus MRHIER processing.
 *
 * | MRHIER | --> | MRHIER |
 * ptr_id is added to the source table. ptr_id is the source MRHIER's row number.
@@ -264,7 +267,6 @@ $$
 / table. A `ptr_id` to serve as a unique identifier each row number, which 
 / represents a unique classification for the given AUI.
 **************************************************************************/
-
 DO
 $$
 DECLARE
