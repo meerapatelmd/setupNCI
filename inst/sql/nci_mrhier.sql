@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS public.setup_nci_class_log (
     nci_mrhier_code bigint
 );
 
+
 /**************************************************************************
 Logging Functions
 **************************************************************************/
