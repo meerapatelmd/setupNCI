@@ -35,11 +35,13 @@ copy_mrhier <-
       );
 
       COPY {schema}.raw_mrhier FROM '{mrhier_path}';
+      COMMIT;
 
       DROP TABLE IF EXISTS {schema}.raw_mrhier0;
       CREATE TABLE {schema}.raw_mrhier0 AS (
-        SELECT * FROM {schema}.raw_mrhier;
-      )
+        SELECT * FROM {schema}.raw_mrhier
+      );
+      COMMIT;
 
       DROP TABLE IF EXISTS {schema}.raw_mrhier1;
       CREATE TABLE {schema}.raw_mrhier1 AS (
@@ -48,6 +50,7 @@ copy_mrhier <-
        m.*
       FROM {schema}.raw_mrhier0 m
       );
+      COMMIT;
 
 
       DROP TABLE IF EXISTS {schema}.raw_mrhier2;
@@ -58,7 +61,7 @@ copy_mrhier <-
       FROM {schema}.raw_mrhier1 m
       ORDER BY row_id
       );
-
+      COMMIT;
 
 
       DROP TABLE IF EXISTS {schema}.raw_mrhier3;
@@ -70,6 +73,7 @@ copy_mrhier <-
       FROM {schema}.raw_mrhier2 m
       ORDER BY row_id
       );
+      COMMIT;
 
       DROP TABLE IF EXISTS {schema}.raw_mrhier4;
       CREATE TABLE {schema}.raw_mrhier4 AS (
@@ -86,13 +90,16 @@ copy_mrhier <-
       	hcd varchar(100),
       	cvf int,
       	filler_col int)
-      	);
+      	)
+      ;
+      COMMIT;
+
 
 
       DROP TABLE IF EXISTS {schema}.mrhier;
       CREATE TABLE {schema}.mrhier AS (
       SELECT DISTINCT cui, aui, cxn, paui, sab, rela, ptr, hcd, cvf, filler_col FROM {schema}.raw_mrhier4);
-
+      COMMIT;
 
       DROP TABLE {schema}.raw_mrhier0;
       DROP TABLE {schema}.raw_mrhier1;
@@ -161,9 +168,9 @@ copy_mrhier <-
                   checks = "")
 
     secretary::typewrite("RAW_MRHIER Last Line:")
-    huxtable::print_screen(raw_line_n)
+    huxtable::hux(raw_line_n)
     secretary::typewrite("MRHIER Last Line:")
-    huxtable::print_screen(final_line_n)
+    huxtable::hux(final_line_n)
 
 
 
