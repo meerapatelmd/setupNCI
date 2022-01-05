@@ -77,7 +77,14 @@ copy_mrhier <-
       DROP TABLE IF EXISTS {schema}.raw_mrhier4;
       CREATE TABLE {schema}.raw_mrhier4 AS (
       SELECT *
-      FROM crosstab('SELECT row_id, col_index, val FROM {schema}.raw_mrhier3 WHERE col_index < 11 ORDER BY 1,2', 'SELECT DISTINCT col_index FROM {schema}.raw_mrhier3 WHERE col_index < 11 ORDER BY 1')
+      FROM
+        crosstab(
+          'SELECT row_id, col_index, val
+          FROM {schema}.raw_mrhier3
+          WHERE col_index < 11 ORDER BY 1,2',
+          'SELECT DISTINCT col_index
+          FROM {schema}.raw_mrhier3
+          WHERE col_index < 11 ORDER BY 1')
       AS (rowid bigint,
       	cui varchar(10),
       	aui varchar(9),
@@ -97,7 +104,19 @@ copy_mrhier <-
 
       DROP TABLE IF EXISTS {schema}.mrhier;
       CREATE TABLE {schema}.mrhier AS (
-      SELECT DISTINCT cui, aui, cxn, paui, sab, rela, ptr, hcd, cvf, filler_col FROM {schema}.raw_mrhier4);
+        SELECT DISTINCT
+          cui,
+          aui,
+          cxn,
+          paui,
+          sab,
+          rela,
+          ptr,
+          hcd,
+          cvf,
+          filler_col
+        FROM {schema}.raw_mrhier4
+      );
       COMMIT;
 
       DROP TABLE {schema}.raw_mrhier0;
@@ -121,7 +140,8 @@ copy_mrhier <-
     raw_rows <-
       pg13::query(
         conn = conn,
-        sql_statement = glue::glue("SELECT COUNT(*) FROM {schema}.raw_mrhier;"),
+        sql_statement =
+          glue::glue("SELECT COUNT(*) FROM {schema}.raw_mrhier;"),
         verbose = verbose,
         render_sql = render_sql,
         checks = ""
@@ -129,7 +149,8 @@ copy_mrhier <-
     final_rows <-
       pg13::query(
         conn = conn,
-        sql_statement = glue::glue("SELECT COUNT(*) FROM {schema}.mrhier;"),
+        sql_statement =
+          glue::glue("SELECT COUNT(*) FROM {schema}.mrhier;"),
         verbose = verbose,
         render_sql = render_sql,
         checks = ""
@@ -142,7 +163,8 @@ copy_mrhier <-
     raw_line1 <-
       pg13::query(
         conn = conn,
-        sql_statement = glue::glue("SELECT * FROM {schema}.raw_mrhier LIMIT 1;"),
+        sql_statement =
+          glue::glue("SELECT * FROM {schema}.raw_mrhier LIMIT 1;"),
         verbose = verbose,
         render_sql = render_sql,
         checks = ""
@@ -151,21 +173,24 @@ copy_mrhier <-
     final_line1 <-
       pg13::query(
         conn = conn,
-        sql_statement = glue::glue("SELECT * FROM {schema}.mrhier LIMIT 1;"),
+        sql_statement =
+          glue::glue("SELECT * FROM {schema}.mrhier LIMIT 1;"),
         verbose = verbose,
         render_sql = render_sql,
         checks = ""
       )
 
     secretary::typewrite("RAW_MRHIER First Line:")
-    huxtable::print_screen(raw_line1)
+    huxtable::hux(raw_line1)
     secretary::typewrite("MRHIER First Line:")
-    huxtable::print_screen(final_line1)
+    huxtable::hux(final_line1)
 
     raw_line_n <-
       pg13::query(
         conn = conn,
-        sql_statement = glue::glue("SELECT * FROM {schema}.raw_mrhier OFFSET (SELECT count(*) FROM {schema}.raw_mrhier)-1;"),
+        sql_statement =
+          glue::glue(
+            "SELECT * FROM {schema}.raw_mrhier OFFSET (SELECT count(*) FROM {schema}.raw_mrhier)-1;"),
         verbose = verbose,
         render_sql = render_sql,
         checks = ""
