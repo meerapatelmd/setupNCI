@@ -1,15 +1,8 @@
 #' @title
-#' Instantiate Postgres
+#' Instantiate NCI Metathesaurus
 #' @inherit setup description
 #' @inheritParams setup
-#' @seealso
-#'  \code{\link[pg13]{lsSchema}},\code{\link[pg13]{send}},\code{\link[pg13]{lsTables}},\code{\link[pg13]{dropTable}}
-#'  \code{\link[SqlRender]{render}}
-#'  \code{\link[tibble]{as_tibble}}
-#'  \code{\link[dplyr]{mutate}},\code{\link[dplyr]{select}},\code{\link[dplyr]{distinct}}
-#'  \code{\link[stringr]{str_remove}}
-#'  \code{\link[progress]{progress_bar}}
-#' @noRd
+#' @rdname setup_ncim
 #' @export
 #' @importFrom pg13 lsSchema send lsTables dropTable
 #' @importFrom SqlRender render
@@ -21,7 +14,8 @@
 
 setup_ncim <-
   function(conn,
-           schema = "mth",
+           conn_fun = "pg13::local_connect()",
+           schema = "ncim",
            path_to_rrfs,
            steps = c("reset_schema",
                      "ddl_tables",
@@ -32,7 +26,7 @@ setup_ncim <-
            omop_only = FALSE,
            english_only = TRUE,
            log_schema = "public",
-           log_table_name = "setup_mth_log",
+           log_table_name = "setup_ncim_log",
            log_version,
            log_release_date,
            verbose = TRUE,

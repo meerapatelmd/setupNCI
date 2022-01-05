@@ -1,7 +1,7 @@
 Package: setupNCI
 Title: Load the NCI Metathesaurus, NCI Thesaurus, and the
     map between both into Postgres. 
-Version: 1.2.0
+Version: 1.2.0.9000
 Authors@R: 
     person(given = "Meera",
            family = "Patel",

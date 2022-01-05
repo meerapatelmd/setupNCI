@@ -6,6 +6,7 @@
 \usage{
 load_ncit(
   conn,
+  conn_fun = "pg13::local_connect()",
   schema = "nci",
   log_schema = "public",
   log_table = "setup_nci_log"

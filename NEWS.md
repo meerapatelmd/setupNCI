@@ -1,3 +1,11 @@
+# setupNCI 1.2.0.9000  
+
+* Added `conn_fun` evaluation  
+
+* Separated `run_setup()` to `nci` schema to 
+NCI Metathesaurus (`ncim`) and NCI Thesaurus (`ncit`)  
+
+
 # setupNCI 1.2.0    
 
 * MRHIER fails to copy due to unknown reasons. The error 

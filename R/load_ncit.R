@@ -36,14 +36,21 @@
 
 load_ncit <-
   function(conn,
+           conn_fun = "pg13::local_connect()",
            schema = "nci",
            log_schema = "public",
            log_table = "setup_nci_log") {
 
+    if (missing(conn)) {
 
-if (missing(conn)) {
-  stop("`conn` is missing.")
-}
+      conn <-
+        eval(rlang::parse_expr(conn_fun))
+
+      on.exit(pg13::dc(conn = conn))
+
+
+    }
+
 response <-
   xml2::read_html(x = "https://evs.nci.nih.gov/ftp1/NCI_Thesaurus/")
 
