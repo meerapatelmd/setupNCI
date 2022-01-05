@@ -3,7 +3,8 @@
 * Added `conn_fun` evaluation  
 
 * Separated `run_setup()` to `nci` schema to 
-NCI Metathesaurus (`ncim`) and NCI Thesaurus (`ncit`)  
+NCI Metathesaurus (`ncim`) and NCI Thesaurus (`ncit`) with 
+separate logs at scale of 1 row per update.  
 
 * Removed instantiation of Code CUI Map  
 
