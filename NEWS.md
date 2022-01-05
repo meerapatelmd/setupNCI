@@ -1,4 +1,4 @@
-# setupNCI 1.1.0.9000  
+# setupNCI 1.2.0    
 
 * MRHIER fails to copy due to unknown reasons. The error 
 message is as follows:  
