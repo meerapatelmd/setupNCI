@@ -8,8 +8,6 @@ setup_ncit(
   conn,
   conn_fun = "pg13::local_connect()",
   schema = "ncit",
-  path_to_rrfs,
-  ncim_version,
   log_schema = "public",
   log_table = "setup_ncit_log"
 )
@@ -18,8 +16,6 @@ setup_ncit(
 \item{conn}{Postgres connection object.}
 
 \item{schema}{Schema to write to, Default: 'nci'}
-
-\item{ncim_version}{NCI Metathesaurus version}
 
 \item{log_schema}{Schema for the log table, Default: 'public'}
 

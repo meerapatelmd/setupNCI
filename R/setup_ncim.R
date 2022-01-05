@@ -20,21 +20,33 @@ setup_ncim <-
            steps = c("reset_schema",
                      "ddl_tables",
                      "copy_rrfs",
-                     "add_indexes",
-                     "log"),
+                     "copy_mrhier",
+                     "log",
+                     "add_indexes"),
            mrconso_only = FALSE,
            omop_only = FALSE,
            english_only = TRUE,
            log_schema = "public",
            log_table_name = "setup_ncim_log",
            log_version,
-           log_release_date,
            verbose = TRUE,
            render_sql = TRUE,
            render_only = FALSE) {
 
-    if (missing(log_version)|missing(log_release_date)) {
-      stop("`log_version` and `log_release_date` are required.")
+    if (missing(log_version)) {
+      stop("`log_version` is required.")
+    }
+
+    if (missing(conn)) {
+
+      conn <-
+        eval(rlang::parse_expr(conn_fun))
+
+      on.exit(
+        pg13::dc(conn = conn)
+      )
+
+
     }
 
 
@@ -136,19 +148,21 @@ setup_ncim <-
                 render_sql = render_sql)
     }
 
+    if ("copy_mrhier" %in% steps) {
 
-    if ("add_indexes" %in% steps) {
-
-      add_indexes(conn = conn,
+      copy_mrhier(path_to_rrfs = path_to_rrfs,
+                  conn = conn,
                   schema = schema,
                   verbose = verbose,
                   render_sql = render_sql)
+
     }
+
 
     # Log
     if ("log" %in% steps) {
       table_names <-
-        pg13::ls_tables(conn = conn,
+        pg13::lsTables(conn = conn,
                         schema = schema,
                         verbose = verbose,
                         render_sql = render_sql)
@@ -165,11 +179,9 @@ setup_ncim <-
                            values_from = "Rows") %>%
         dplyr::mutate(sm_datetime = Sys.time(),
                       sm_version = log_version,
-                      sm_release_date = log_release_date,
                       sm_schema = schema) %>%
         dplyr::select(sm_datetime,
                       sm_version,
-                      sm_release_date,
                       sm_schema,
                       dplyr::everything())
 
@@ -190,7 +202,6 @@ setup_ncim <-
             current_row_count)  %>%
           dplyr::select(sm_datetime,
                         sm_version,
-                        sm_release_date,
                         sm_schema,
                         dplyr::everything())
 
@@ -220,4 +231,13 @@ setup_ncim <-
       cli::cat_line()
 
     }
+
+    if ("add_indexes" %in% steps) {
+
+      add_indexes(conn = conn,
+                  schema = schema,
+                  verbose = verbose,
+                  render_sql = render_sql)
+    }
+
   }

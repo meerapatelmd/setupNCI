@@ -5,6 +5,8 @@
 * Separated `run_setup()` to `nci` schema to 
 NCI Metathesaurus (`ncim`) and NCI Thesaurus (`ncit`)  
 
+* Removed instantiation of Code CUI Map  
+
 
 # setupNCI 1.2.0    
 
