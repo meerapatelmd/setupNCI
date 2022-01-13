@@ -53,6 +53,85 @@ process_owl_to_neo4j <-
 
   }
 
+
+
+
+manual_domain_map <-
+  tibble::tribble(
+    ~`domain_id_1`, ~`domain_id_2`, ~`rel_type`,
+    'Drug','Drug','Chemical_Or_Drug_Has_Mechanism_Of_Action',
+    'Drug','Drug','Chemical_Or_Drug_Has_Physiologic_Effect',
+    'Drug','Drug','Chemotherapy_Regimen_Has_Component',
+    'Drug','Drug','Has_Pharmaceutical_Administration_Method',
+    'Drug','Drug','Has_Pharmaceutical_Intended_Site',
+    'Drug','Drug','Has_Pharmaceutical_Release_Characteristics',
+    'Drug','Drug','Has_Pharmaceutical_Transformation',
+    'Drug','Observation','Chemical_Or_Drug_Affects_Abnormal_Cell',
+    'Drug','Observation','Chemical_Or_Drug_Affects_Gene_Product',
+    'Drug','Observation','Chemical_Or_Drug_Is_Metabolized_By_Enzyme',
+    'Drug','Observation','Chemical_Or_Drug_Plays_Role_In_Biological_Process',
+    'Drug','Observation','Regimen_Has_Accepted_Use_For_Disease',
+    'Observation','Observation','Allele_In_Chromosomal_Location',
+    'Observation','Observation','Allele_Plays_Altered_Role_In_Process',
+    'Observation','Observation','Anatomic_Structure_Has_Location',
+    'Observation','Observation','Anatomic_Structure_Is_Physical_Part_Of',
+    'Observation','Observation','Biological_Process_Has_Associated_Location',
+    'Observation','Observation','Biological_Process_Has_Initiator_Process',
+    'Observation','Observation','Biological_Process_Has_Result_Anatomy',
+    'Observation','Observation','Biological_Process_Has_Result_Biological_Process',
+    'Observation','Observation','Biological_Process_Is_Part_Of_Process',
+    'Observation','Observation','Cytogenetic_Abnormality_Involves_Chromosome',
+    'Observation','Observation','Disease_Excludes_Abnormal_Cell',
+    'Observation','Observation','Disease_Excludes_Cytogenetic_Abnormality',
+    'Observation','Observation','Disease_Excludes_Finding',
+    'Observation','Observation','Disease_Excludes_Metastatic_Anatomic_Site',
+    'Observation','Observation','Disease_Excludes_Molecular_Abnormality',
+    'Observation','Observation','Disease_Excludes_Normal_Cell_Origin',
+    'Observation','Observation','Disease_Excludes_Normal_Tissue_Origin',
+    'Observation','Observation','Disease_Excludes_Primary_Anatomic_Site',
+    'Observation','Observation','Disease_Has_Abnormal_Cell',
+    'Observation','Observation','Disease_Has_Associated_Anatomic_Site',
+    'Observation','Observation','Disease_Has_Associated_Disease',
+    'Observation','Observation','Disease_Has_Cytogenetic_Abnormality',
+    'Observation','Observation','Disease_Has_Finding',
+    'Observation','Observation','Disease_Has_Metastatic_Anatomic_Site',
+    'Observation','Observation','Disease_Has_Molecular_Abnormality',
+    'Observation','Observation','Disease_Has_Normal_Cell_Origin',
+    'Observation','Observation','Disease_Has_Normal_Tissue_Origin',
+    'Observation','Observation','Disease_Has_Primary_Anatomic_Site',
+    'Observation','Observation','Disease_Is_Grade',
+    'Observation','Observation','Disease_Is_Stage',
+    'Observation','Observation','Disease_Mapped_To_Chromosome',
+    'Observation','Observation','Disease_Mapped_To_Gene',
+    'Observation','Observation','Disease_May_Have_Abnormal_Cell',
+    'Observation','Observation','Disease_May_Have_Associated_Disease',
+    'Observation','Observation','Disease_May_Have_Cytogenetic_Abnormality',
+    'Observation','Observation','Disease_May_Have_Finding',
+    'Observation','Observation','Disease_May_Have_Molecular_Abnormality',
+    'Observation','Observation','Disease_May_Have_Normal_Cell_Origin',
+    'Observation','Observation','Disease_May_Have_Normal_Tissue_Origin',
+    'Observation','Observation','Gene_Associated_With_Disease',
+    'Observation','Observation','Gene_Has_Physical_Location',
+    'Observation','Observation','Gene_In_Chromosomal_Location',
+    'Observation','Observation','Gene_Involved_In_Pathogenesis_Of_Disease',
+    'Observation','Observation','Gene_Is_Biomarker_Type',
+    'Observation','Observation','Gene_Is_Element_In_Pathway',
+    'Observation','Observation','Gene_Plays_Role_In_Process',
+    'Observation','Observation','Has_CTCAE_5_Parent',
+    'Observation','Observation','Has_INC_Parent',
+    'Observation','Observation','Molecular_Abnormality_Involves_Gene',
+    'Observation','Observation','Neoplasm_Has_Special_Category',
+    'Procedure','Observation','Procedure_Has_Completely_Excised_Anatomy',
+    'Procedure','Observation','Procedure_Has_Excised_Anatomy',
+    'Procedure','Observation','Procedure_Has_Partially_Excised_Anatomy',
+    'Procedure','Observation','Procedure_Has_Target_Anatomy',
+    'Procedure','Observation','Procedure_May_Have_Completely_Excised_Anatomy',
+    'Procedure','Observation','Procedure_May_Have_Excised_Anatomy',
+    'Procedure','Observation','Procedure_May_Have_Partially_Excised_Anatomy',
+    'Observation','Observation', 'subClassOf'
+  )
+
+
 #' @title
 #' Process NCI Thesaurus OWL into OMOP Tables
 #'
@@ -60,11 +139,27 @@ process_owl_to_neo4j <-
 #' CSV files
 #'
 #' @details
-#' The OWL files are processed into Neo4j format Nodes and Edges csvs
-#' in Python using the reticulate package. These csvs are then
-#' processed further into OMOP format Vocabulary table csvs.
+#' The OWL files are first processed into the Neo4j nodes and edges csvs
+#' using the `process_owl_to_neo4j` function in this package. These csvs are then
+#' processed further into OMOP format Vocabulary table csvs: CONCEPT, CONCEPT_SYNONYM,
+#' CONCEPT_RELATIONSHIP, CONCEPT_ANCESTOR. Metadata tables VOCABULARY, RELATIONSHIP,
+#' and CONCEPT_CLASS are also created.
 #'
-#' Only asserted relationships are used to generate these csvs.
+#' CONCEPT:
+#' Concept ids are generated by row number + 20000. Concept ids are not created for
+#' any of the metadata concepts in the VOCABULARY, RELATIONSHIP and CONCEPT_CLASS tables.
+#' The `domain_id` is determined by the source `rel_type` value in the Edges file. The
+#' `concept_class_id` are dependant on the placement of the hierarchy. If it is
+#' the topmost ancestor, it is 'Root' Class. If it is a bottomost descendant, it is
+#' a 'Leaf' Non-Standard Concept. Otherwise the concept is a 'SubClass' Non-Standard Concept.
+#'
+#' CONCEPT_RELATIONSHIP:
+#' Only asserted relationships are used to generate these csvs. Including
+#' the inherited and annotated relationships introduced too much noise.
+#'
+#' CONCEPT_SYNONYM: All language concepts id are 4180186, only
+#' concept synonyms in the `FULL_SYN` source field that did not have a
+#' lowercased match to the `Preferred_Name` was used.
 #'
 #' @rdname process_owl_to_omop
 #'
@@ -264,11 +359,11 @@ process_owl_to_omop <-
     concept_relationship_stage %>%
       mutate(
         concept_class_id_1 =
-          case_when(concept_code_1 %in% root_class_codes   ~ 'Root Class',
+          case_when(concept_code_1 %in% root_class_codes   ~ 'Root',
                     concept_code_1 %in% leaf_concept_codes ~ 'Leaf',
                     TRUE ~ 'SubClass'),
         concept_class_id_2 =
-          case_when(concept_code_2 %in% root_class_codes   ~ 'Root Class',
+          case_when(concept_code_2 %in% root_class_codes   ~ 'Root',
                     concept_code_2 %in% leaf_concept_codes ~ 'Leaf',
                     TRUE ~ 'SubClass')) %>%
       left_join(manual_domain_map, by = "rel_type")
@@ -295,7 +390,7 @@ process_owl_to_omop <-
       tibble::tribble(
         ~`concept_class_id`, ~`standard_concept`,
         'Leaf',NA_character_,
-        'Root Class','C',
+        'Root','C',
         'SubClass',NA_character_),
       by = "concept_class_id") %>%
       left_join(
@@ -421,7 +516,7 @@ process_owl_to_omop <-
 
     roots <-
     concepts_staged2 %>%
-      dplyr::filter(concept_class_id == 'Root Class') %>%
+      dplyr::filter(concept_class_id == 'Root') %>%
       select(concept_id) %>%
       unlist() %>%
       unname()
@@ -430,7 +525,7 @@ process_owl_to_omop <-
       vector(mode = "list",
              length = length(roots)) %>%
       set_names(    concepts_staged2 %>%
-                      dplyr::filter(concept_class_id == 'Root Class') %>%
+                      dplyr::filter(concept_class_id == 'Root') %>%
                       select(concept_name) %>%
                       unlist() %>%
                       unname())
@@ -567,257 +662,3 @@ for (i in seq_along(output_map)) {
 }
 
 }
-
-
-# caiconnect2::write_c3_table(
-#   schema = "omop_athena_nci",
-#   table_name = "concept_ancestor",
-#   data = concept_ancestor_stage
-# )
-#
-# caiconnect2::write_c3_table(
-#   schema = "omop_athena_nci",
-#   table_name = "concept",
-#   data = concepts_staged2
-# )
-#
-# caiconnect2::write_c3_table(
-#   schema = "omop_athena_nci",
-#   table_name = "concept_relationship",
-#   data = concept_relationship_stage3
-# )
-#
-# caiconnect2::write_c3_table(
-#   schema = "omop_athena_nci",
-#   table_name = "relationship",
-#   data = relationship_stage
-# )
-#
-# caiconnect2::write_c3_table(
-#   schema = "omop_athena_nci",
-#   table_name = "vocabulary",
-#   data = vocabulary_stage
-# )
-#
-# caiconnect2::write_c3_table(
-#   schema = "omop_athena_nci",
-#   table_name = "concept_class",
-#   data = concept_class_stage
-# )
-#
-# # Use Case
-#
-# output0 <-
-# concepts_staged2 %>%
-#   dplyr::filter(concept_class_id == 'Root Class') %>%
-#   select(concept_id,
-#          concept_code,
-#          concept_name) %>%
-#   inner_join(concept_ancestor_stage,
-#              by = c("concept_id" = "ancestor_concept_id")) %>%
-#   select(ancestor_id =   concept_id,
-#          ancestor_code = concept_code,
-#          ancestor_name = concept_name,
-#          descendant_concept_id,
-#          min_levels_of_separation,
-#          max_levels_of_separation) %>%
-#   inner_join(concepts_staged2,
-#              by = c("descendant_concept_id" = "concept_id")) %>%
-#   select(ancestor_id,
-#          ancestor_code,
-#          ancestor_name,
-#          descendant_id = descendant_concept_id,
-#          descendant_code = concept_code,
-#          descendant_name = concept_name,
-#          level = min_levels_of_separation) %>%
-#   tidyr::pivot_wider(
-#     id_cols = c(ancestor_id,
-#                 ancestor_code,
-#                 ancestor_name),
-#     names_from = level,
-#     values_from = descendant_name,
-#     values_fn   = list)
-
-
-#
-#     leafs <-
-#       classification %>%
-#       dplyr::filter(!(source %in% classification$target)) %>%
-#       distinct(source)
-#
-#     # Node to Concept Stage
-#
-#     concept_stage <-
-#     node %>%
-#       transmute(concept_code = code,
-#              concept_name = Preferred_Name,
-#              vocabulary_id = 'NCI Thesaurus',
-#              standard_concept = '',
-#              invalid_reason = ifelse(!is.na(Concept_Status),
-#                                      "D",
-#                                      NA_character_),
-#              valid_start_date = "1970-01-01",
-#              valid_end_date   = ifelse(!is.na(Concept_Status),
-#                                        "1970-01-01",
-#                                        "2099-12-31")) %>%
-#       distinct()
-#
-#
-#
-#     edge <-
-#       readr::read_csv(file =
-#                         file.path(base_folder,
-#                                   nci_version,
-#                                   "edge.csv"))
-#
-#
-#     concept_relationship_stage <-
-#       edge %>%
-#       transmute(
-#         concept_code_1 = target,
-#         concept_code_2 = source,
-#         relationship_id = rel_type,
-#         rel_invalid_reason = NA_character_,
-#         rel_valid_start_date = "1970-01-01",
-#         rel_valid_end_date = "2099-12-31") %>%
-#       distinct()
-#
-#     concept_class_map <-
-#     concept_relationship_stage %>%
-#       left_join(concept_stage %>%
-#                   rename_all(function(x) sprintf("%s_1", x)),
-#                 by = c("concept_code_1" = "concept_code_1")) %>%
-#       left_join(concept_stage %>%
-#                   rename_all(function(x) sprintf("%s_2", x)),
-#                 by = c("concept_code_2" = "concept_code_2")) %>%
-#       inner_join(ncit_to_omop_map_1,
-#                 by = c("relationship_id", "standard_concept_1", "standard_concept_2"))
-#
-#     out_map <-
-#     bind_rows(
-#     concept_class_map %>%
-#       select(concept_code =
-#                concept_code_1,
-#              concept_name =
-#                concept_name_1,
-#              concept_class_id =
-#                concept_class_id_1),
-#     concept_class_map %>%
-#       select(concept_code =
-#                concept_code_2,
-#              concept_name =
-#                concept_name_2,
-#              concept_class_id =
-#                concept_class_id_2)) %>%
-#      distinct()
-#
-#
-#     out_map
-#
-#   }
-#
-# staged_tables[[2]] %>%
-#   select(concept_code_1,
-#          concept_code_2,
-#          relationship_id) %>%
-#   left_join(staged_tables[[1]] %>%
-#               rename_all(function(x) sprintf("%s_1", x)),
-#             by = c("concept_code_1" = "concept_code_1")) %>%
-#   left_join(staged_tables[[1]] %>%
-#               rename_all(function(x) sprintf("%s_2", x)),
-#             by = c("concept_code_2" = "concept_code_2")) %>%
-#   dplyr::filter(concept_code_2 == 'C13208') %>%
-#   select(concept_name_1,
-#          relationship_id,
-#          concept_name_2) %>%
-#   inner_join(ncit_to_omop_map_1)
-#   # dplyr::filter(!(relationship_id %in% concept_class_map$relationship_id)) %>%
-#   #dplyr::filter(relationship_id == 'Related_To_Genetic_Biomarker')
-#
-#
-#   dplyr::filter(!(relationship_id %in% c("subClassOf", "Concept_In_Subset")))
-#
-#   rubix::filter_at_grepl(col = relationship_id,
-#                          grepl_phrase = "Gene_Is_Biomarker_Of|Is_Related_To_Endogenous_Product|Biological_Process_Has_Result_Chemical_Or_Drug|Allele_Has_Activity|Has_ICDC_Value|Biological_Process_Has_Initiator_Chemical_Or_Drug|disjointWith|Allele_Has_Abnormality|Has_CTDC_Value|Gene_Has_Abnormality|Chemical_Or_Drug_Affects_Cell_Type_Or_Tissue|EO_Disease|Has_GDC_Value|Has_Salt|Has_Free_Acid|Has_Data_Element|Role_Has|Conceptual_Part_Of|Has_PCDC_Data_Type|Is_Value_For_GDC_Property|Value_Set_Is_Paired_With|Gene_Found_In_Organism|Has_Pharmaceutical_Basic_Dose_Form|Gene_Product|State_Of_Matter|Has_Target|Permissible_Value",
-#                          evaluates_to = FALSE) %>%
-#   group_by(relationship_id) %>%
-#   mutate(count = n()) %>%
-#   ungroup() %>%
-#   arrange(desc(count))
-#
-#
-# ncit_to_omop_map_1 <-
-#   tibble::tribble(
-#     ~`domain_id_1`, ~`concept_class_id_1`, ~`relationship_id`, ~`is_hierarchical`, ~`domain_id_2`, ~`concept_class_id_2`, ~`standard_concept_1`, ~`standard_concept_2`,
-#     'Drug','Substance','Chemotherapy_Regimen_Has_Component',0,'Drug','Regimen','','',
-#     'Observation','Disease','Regimen_Has_Accepted_Use_For_Disease',0,'Drug','Regimen','','',
-#     'Drug','Administration Method','Has_Pharmaceutical_Administration_Method',0,'Drug','Dosage Form','','',
-#     'Drug','Intended Site','Has_Pharmaceutical_Intended_Site',0,'Drug','Dosage Form','','',
-#     'Drug','Transformation','Has_Pharmaceutical_Transformation',0,'Drug','Dosage Form','','',
-#     'Drug','Release','Has_Pharmaceutical_Release_Characteristics',0,'Drug','Dosage Form','','',
-#     'Observation','Anatomic Structure','Biological_Process_Has_Result_Anatomy',0,'Observation','Process','','',
-#     'Observation','Anatomic Structure','Anatomic_Structure_Has_Location',0,'Observation','Anatomic Structure','','',
-#     'Observation','Anatomic Structure','Biological_Process_Has_Associated_Location',0,'Observation','Process','','',
-#     'Observation','Anatomic Structure','Anatomic_Structure_Is_Physical_Part_Of',0,'Observation','Anatomic Structure','','',
-#     'Observation','Anatomic Structure','Procedure_Has_Target_Anatomy',0,'Procedure','Procedure','','',
-#     'Observation','Anatomic Structure','Procedure_Has_Excised_Anatomy',0,'Procedure','Procedure','','',
-#     'Observation','Anatomic Structure','Procedure_May_Have_Excised_Anatomy',0,'Procedure','Procedure','','',
-#     'Observation','Anatomic Structure','Procedure_May_Have_Partially_Excised_Anatomy',0,'Procedure','Procedure','','',
-#     'Observation','Anatomic Structure','Procedure_Has_Completely_Excised_Anatomy',0,'Procedure','Procedure','','',
-#     'Observation','Anatomic Structure','Procedure_May_Have_Completely_Excised_Anatomy',0,'Procedure','Procedure','','',
-#     'Observation','Anatomic Structure','Procedure_Has_Partially_Excised_Anatomy',0,'Procedure','Procedure','','',
-#     'Observation','Disease','Disease_Has_Associated_Disease',0,'Observation','Disease','','',
-#     'Observation','Disease','Disease_May_Have_Associated_Disease',0,'Observation','Disease','','',
-#     'Observation','Finding','Disease_Has_Finding',0,'Observation','Disease','','',
-#     'Observation','Finding','Disease_May_Have_Finding',0,'Observation','Disease','','',
-#     'Observation','Finding','Disease_Excludes_Finding',0,'Observation','Disease','','',
-#     'Observation','Tissue','Disease_Has_Normal_Tissue_Origin',0,'Observation','Disease','','',
-#     'Observation','Tissue','Disease_May_Have_Normal_Tissue_Origin',0,'Observation','Disease','','',
-#     'Observation','Tissue','Disease_Excludes_Normal_Tissue_Origin',0,'Observation','Disease','','',
-#     'Observation','Cell','Disease_Has_Normal_Cell_Origin',0,'Observation','Disease','','',
-#     'Observation','Cell','Disease_May_Have_Normal_Cell_Origin',0,'Observation','Disease','','',
-#     'Observation','Cell','Disease_Excludes_Normal_Cell_Origin',0,'Observation','Disease','','',
-#     'Observation','Cell','Disease_Has_Abnormal_Cell',0,'Observation','Disease','','',
-#     'Observation','Cell','Disease_May_Have_Abnormal_Cell',0,'Observation','Disease','','',
-#     'Observation','Cell','Disease_Excludes_Abnormal_Cell',0,'Observation','Disease','','',
-#     'Observation','Cell','Chemical_Or_Drug_Affects_Abnormal_Cell',0,'Drug','Substance','','',
-#     'Observation','Anatomic Structure','Disease_Has_Metastatic_Anatomic_Site',0,'Observation','Disease','','',
-#     'Observation','Anatomic Structure','Disease_Excludes_Metastatic_Anatomic_Site',0,'Observation','Disease','','',
-#     'Observation','Anatomic Structure','Disease_Has_Associated_Anatomic_Site',0,'Observation','Disease','','',
-#     'Observation','Anatomic Structure','Disease_Has_Primary_Anatomic_Site',0,'Observation','Disease','','',
-#     'Observation','Anatomic Structure','Disease_Excludes_Primary_Anatomic_Site',0,'Observation','Disease','','',
-#     'Observation','Gene','Disease_Mapped_To_Gene',0,'Observation','Disease','','',
-#     'Drug','Process','Chemical_Or_Drug_Has_Physiologic_Effect',0,'Drug','Substance','','',
-#     'Observation','Enzyme','Chemical_Or_Drug_Is_Metabolized_By_Enzyme',0,'Drug','Substance','','',
-#     'Observation','Gene Product','Chemical_Or_Drug_Affects_Gene_Product',0,'Drug','Substance','','',
-#     # 'Observation','Genetic Biomarker','Related_To_Genetic_Biomarker',0,'Measurement','Measurement','','',
-#     'Observation','Chromosomal Location','Gene_In_Chromosomal_Location',0,'Observation','Gene','','',
-#     'Observation','Biochemical Pathway','Gene_Is_Element_In_Pathway',0,'Observation','Gene','','',
-#     'Observation','Process','Gene_Plays_Role_In_Process',0,'Observation','Gene','','',
-#     'Observation','Disease','Gene_Associated_With_Disease',0,'Observation','Gene','','',
-#     'Observation','Gene','Molecular_Abnormality_Involves_Gene',0,'Observation','Molecular Abnormality','','',
-#     'Observation','Disease','Gene_Involved_In_Pathogenesis_Of_Disease',0,'Observation','Gene','','',
-#     'Drug','Process','Chemical_Or_Drug_Has_Mechanism_Of_Action',0,'Drug','Substance','','',
-#     'Observation','Process','Chemical_Or_Drug_Plays_Role_In_Biological_Process',0,'Drug','Substance','','',
-#     'Observation','Disease Stage','Disease_Is_Stage',0,'Observation','Disease','','',
-#     'Observation','Disease Grade','Disease_Is_Grade',0,'Observation','Disease','','',
-#     'Observation','Cytogenetic Abnormality','Disease_Has_Cytogenetic_Abnormality',0,'Observation','Disease','','',
-#     'Observation','Cytogenetic Abnormality','Disease_May_Have_Cytogenetic_Abnormality',0,'Observation','Disease','','',
-#     'Observation','Cytogenetic Abnormality','Disease_Excludes_Cytogenetic_Abnormality',0,'Observation','Disease','','',
-#     'Observation','Molecular Abnormality','Disease_May_Have_Molecular_Abnormality',0,'Observation','Disease','','',
-#     'Observation','Molecular Abnormality','Disease_Has_Molecular_Abnormality',0,'Observation','Disease','','',
-#     'Observation','Molecular Abnormality','Disease_Excludes_Molecular_Abnormality',0,'Observation','Disease','','',
-#     'Observation','Chromosome','Disease_Mapped_To_Chromosome',0,'Observation','Disease','','',
-#     'Observation','Chromosomal Location','Allele_In_Chromosomal_Location',0,'Observation','Allele','','',
-#     'Observation','Process','Allele_Plays_Altered_Role_In_Process',0,'Observation','Allele','','',
-#     'Observation','CTCAE 5 Parent','Has_CTCAE_5_Parent',1,'Observation','CTCAE 5 Child','C','C',
-#     'Observation','Physical Location','Gene_Has_Physical_Location',0,'Observation','Gene','','',
-#     'Observation','Chromosome','Cytogenetic_Abnormality_Involves_Chromosome',0,'Observation','Cytogenetic Abnormality','','',
-#     'Observation','Process','Biological_Process_Is_Part_Of_Process',0,'Observation','Process','','',
-#     'Observation','Process','Biological_Process_Has_Initiator_Process',0,'Observation','Process','','',
-#     'Observation','Process','Biological_Process_Has_Result_Biological_Process',0,'Observation','Process','','',
-#     'Observation','Adverse Event Parent','Has_INC_Parent',1,'Observation','Adverse Event Child','C','C',
-#     'Observation','Neoplasm Category','Neoplasm_Has_Special_Category',1,'Observation','Neoplasm','C','',
-#     'Observation','Biomarker Type','Gene_Is_Biomarker_Type',0,'Observation','Gene','C',''
-#   )
-#
