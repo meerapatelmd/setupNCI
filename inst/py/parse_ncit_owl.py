@@ -8,9 +8,9 @@ from copy import deepcopy
 import pandas as pd
 import xmltodict  
 
-nci_version   = "21.11e"  
-owl_folder    = "/Users/mpatel/terminology/NCIT/"
-base_folder   = "/Users/mpatel/Desktop/NCIt"
+nci_version   = "{{{nci_version}}}"  
+owl_folder    = "{{{owl_folder}}}"
+base_folder   = "{{{base_folder}}}"
 output_folder = os.path.join(base_folder, nci_version)
 json_folder   = os.path.join(output_folder, "json")
 
@@ -315,6 +315,6 @@ ncit_edges['target'] = ncit_edges['target'].apply(lambda s: "C" + s if not s.sta
 print("   JSONS succesfully converted!", flush = True)
 
 print("Saving nodes and edges as csvs...", flush = True)
-ncit_nodes.to_csv(os.path.join(output_folder,"nodes.csv"), index = False, header = True)
-ncit_edges.to_csv(os.path.join(output_folder,"edges.csv"), index = False, header = True) 
+ncit_nodes.to_csv(os.path.join(output_folder,"node.csv"), index = False, header = True)
+ncit_edges.to_csv(os.path.join(output_folder,"edge.csv"), index = False, header = True) 
 print("   Nodes and edges csvs successfully saved!", flush = True)
