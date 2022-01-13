@@ -195,11 +195,11 @@ process_owl_to_omop <-
       'Drug','Drug','Has_Pharmaceutical_Intended_Site',
       'Drug','Drug','Has_Pharmaceutical_Release_Characteristics',
       'Drug','Drug','Has_Pharmaceutical_Transformation',
-      'Observation','Drug','Chemical_Or_Drug_Affects_Abnormal_Cell',
-      'Observation','Drug','Chemical_Or_Drug_Affects_Gene_Product',
-      'Observation','Drug','Chemical_Or_Drug_Is_Metabolized_By_Enzyme',
-      'Observation','Drug','Chemical_Or_Drug_Plays_Role_In_Biological_Process',
-      'Observation','Drug','Regimen_Has_Accepted_Use_For_Disease',
+      'Drug','Observation','Chemical_Or_Drug_Affects_Abnormal_Cell',
+      'Drug','Observation','Chemical_Or_Drug_Affects_Gene_Product',
+      'Drug','Observation','Chemical_Or_Drug_Is_Metabolized_By_Enzyme',
+      'Drug','Observation','Chemical_Or_Drug_Plays_Role_In_Biological_Process',
+      'Drug','Observation','Regimen_Has_Accepted_Use_For_Disease',
       'Observation','Observation','Allele_In_Chromosomal_Location',
       'Observation','Observation','Allele_Plays_Altered_Role_In_Process',
       'Observation','Observation','Anatomic_Structure_Has_Location',
@@ -250,13 +250,13 @@ process_owl_to_omop <-
       'Observation','Observation','Has_INC_Parent',
       'Observation','Observation','Molecular_Abnormality_Involves_Gene',
       'Observation','Observation','Neoplasm_Has_Special_Category',
-      'Observation','Procedure','Procedure_Has_Completely_Excised_Anatomy',
-      'Observation','Procedure','Procedure_Has_Excised_Anatomy',
-      'Observation','Procedure','Procedure_Has_Partially_Excised_Anatomy',
-      'Observation','Procedure','Procedure_Has_Target_Anatomy',
-      'Observation','Procedure','Procedure_May_Have_Completely_Excised_Anatomy',
-      'Observation','Procedure','Procedure_May_Have_Excised_Anatomy',
-      'Observation','Procedure','Procedure_May_Have_Partially_Excised_Anatomy',
+      'Procedure','Observation','Procedure_Has_Completely_Excised_Anatomy',
+      'Procedure','Observation','Procedure_Has_Excised_Anatomy',
+      'Procedure','Observation','Procedure_Has_Partially_Excised_Anatomy',
+      'Procedure','Observation','Procedure_Has_Target_Anatomy',
+      'Procedure','Observation','Procedure_May_Have_Completely_Excised_Anatomy',
+      'Procedure','Observation','Procedure_May_Have_Excised_Anatomy',
+      'Procedure','Observation','Procedure_May_Have_Partially_Excised_Anatomy',
       'Observation','Observation', 'subClassOf'
     )
 
@@ -553,6 +553,7 @@ output_map <-
     RELATIONSHIP = relationship_stage,
     CONCEPT_CLASS = concept_class_stage
   )
+
 
 for (i in seq_along(output_map)) {
 
