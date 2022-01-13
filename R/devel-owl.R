@@ -296,7 +296,7 @@ process_owl_to_omop <-
         ~`concept_class_id`, ~`standard_concept`,
         'Leaf',NA_character_,
         'Root Class','C',
-        'SubClass','C'),
+        'SubClass',NA_character_),
       by = "concept_class_id") %>%
       left_join(
         node %>%
