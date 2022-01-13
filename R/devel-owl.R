@@ -6,20 +6,20 @@
 #' @param base_folder Base folder to which the json and final
 #' node.csv and edge.csv files are written by `nci_version`.
 #'
-#' @rdname process_owl
+#' @rdname process_owl_to_neo4j
 #' @export
 #' @import tidyverse
 #' @import reticulate
 #' @import cli
 #' @importFrom glue glue
 
-process_owl <-
+process_owl_to_neo4j <-
   function(nci_version   = "21.11e",
            owl_folder    = "/Users/mpatel/terminology/NCIT",
-           base_folder   = "/Users/mpatel/Desktop/NCIt") {
+           neo4j_folder   = "/Users/mpatel/Desktop/NCIt/neo4j") {
 
     output_folder <-
-    file.path(base_folder,
+    file.path(glue::glue(neo4j_folder),
               nci_version)
 
 
@@ -53,34 +53,59 @@ process_owl <-
 
   }
 
+#' @title
+#' Process NCI Thesaurus OWL into OMOP Tables
+#'
+#' @return
+#' CSV files
+#'
+#' @details
+#' The OWL files are processed into Neo4j format Nodes and Edges csvs
+#' in Python using the reticulate package. These csvs are then
+#' processed further into OMOP format Vocabulary table csvs.
+#'
+#' Only asserted relationships are used to generate these csvs.
+#'
+#' @rdname process_owl_to_omop
+#'
+#'
+#' @export
+#'
 
-
-process_omop <-
+process_owl_to_omop <-
   function(nci_version   = "21.11e",
            owl_folder    = "/Users/mpatel/terminology/NCIT",
-           base_folder   = "/Users/mpatel/Desktop/NCIt") {
+           neo4j_folder   = "/Users/mpatel/Desktop/NCIt/neo4j",
+           omop_folder   = "/Users/mpatel/Desktop/NCIt/omop") {
 
-    vocabulary_id <- 'CAI NCIt'
+    vocabulary_id   <- 'CAI NCIt'
     vocabulary_name <- 'CAI NCI Thesaurus'
     vocabulary_version <- nci_version
 
-    process_owl(nci_version = nci_version,
+
+    process_owl_to_neo4j(nci_version = nci_version,
                 owl_folder = owl_folder,
-                base_folder = base_folder)
+                neo4j_folder = neo4j_folder)
 
 
-    node <<-
+    node <-
     readr::read_csv(file =
-                      file.path(base_folder,
+                      file.path(neo4j_folder,
                                 nci_version,
                                 "node.csv"))
 
-    edge <<-
+    edge <-
       readr::read_csv(file =
-                        file.path(base_folder,
+                        file.path(neo4j_folder,
                                   nci_version,
                                   "edge.csv"))
 
+
+    # OMOP
+    omop_folder <-
+      file.path(omop_folder,
+                nci_version)
+    cave::dir.create_path(omop_folder)
 
 
     classification <-
@@ -480,58 +505,138 @@ process_omop <-
         bind_rows(y,z) %>%
         distinct()
     }
-  }
 
 concept_ancestor_stage <-
   bind_rows(roots_list) %>%
   distinct()
 
+# Concept Synonym
+concept_synonym_stage <-
+node %>%
+  select(code,
+         Preferred_Name,
+         FULL_SYN) %>%
+  separate_rows(FULL_SYN,
+                sep = "[|]{1}") %>%
+  mutate(lc_preferred_name =
+           tolower(Preferred_Name)) %>%
+  mutate(lc_full_syn =
+           tolower(FULL_SYN)) %>%
+  mutate(is_synonym =
+           lc_preferred_name != lc_full_syn) %>%
+  dplyr::filter(is_synonym == TRUE) %>%
+  dplyr::select(
+    concept_code = code,
+    concept_name = Preferred_Name,
+    concept_synonym_name = FULL_SYN
+  ) %>%
+  distinct()
+
+concept_synonym_stage2 <-
+  concept_synonym_stage %>%
+  left_join(concepts_staged2,
+            by = c("concept_code", "concept_name")) %>%
+  transmute(
+    concept_id,
+    concept_synonym_name,
+    language_concept_id = 4180186) %>%
+  distinct()
 
 
-# Use Case
+output_map <-
+  list(
+    CONCEPT = concepts_staged2,
+    CONCEPT_SYNONYM = concept_synonym_stage2,
+    CONCEPT_ANCESTOR = concept_ancestor_stage,
+    CONCEPT_RELATIONSHIP = concept_relationship_stage3,
+    VOCABULARY = vocabulary_stage,
+    RELATIONSHIP = relationship_stage,
+    CONCEPT_CLASS = concept_class_stage
+  )
 
-output0 <-
-concepts_staged2 %>%
-  dplyr::filter(concept_class_id == 'Root Class') %>%
-  select(concept_id,
-         concept_code,
-         concept_name) %>%
-  inner_join(concept_ancestor_stage,
-             by = c("concept_id" = "ancestor_concept_id")) %>%
-  select(ancestor_id =   concept_id,
-         ancestor_code = concept_code,
-         ancestor_name = concept_name,
-         descendant_concept_id,
-         min_levels_of_separation,
-         max_levels_of_separation) %>%
-  inner_join(concepts_staged2,
-             by = c("descendant_concept_id" = "concept_id")) %>%
-  select(ancestor_id,
-         ancestor_code,
-         ancestor_name,
-         descendant_id = descendant_concept_id,
-         descendant_code = concept_code,
-         descendant_name = concept_name,
-         level = min_levels_of_separation) %>%
-  tidyr::pivot_wider(
-    id_cols = c(ancestor_id,
-                ancestor_code,
-                ancestor_name),
-    names_from = level,
-    values_from = descendant_name,
-    values_fn   = list)
+for (i in seq_along(output_map)) {
 
-output <- output0
-for (i in 1:10) {
-
-  output <-
-    output %>%
-    unnest(all_of(i))
+  readr::write_csv(
+    x = output_map[[i]],
+    file = file.path(omop_folder, xfun::with_ext(names(output_map)[i], "csv")),
+    na = ''
+  )
 
 
 }
 
 }
+
+
+# caiconnect2::write_c3_table(
+#   schema = "omop_athena_nci",
+#   table_name = "concept_ancestor",
+#   data = concept_ancestor_stage
+# )
+#
+# caiconnect2::write_c3_table(
+#   schema = "omop_athena_nci",
+#   table_name = "concept",
+#   data = concepts_staged2
+# )
+#
+# caiconnect2::write_c3_table(
+#   schema = "omop_athena_nci",
+#   table_name = "concept_relationship",
+#   data = concept_relationship_stage3
+# )
+#
+# caiconnect2::write_c3_table(
+#   schema = "omop_athena_nci",
+#   table_name = "relationship",
+#   data = relationship_stage
+# )
+#
+# caiconnect2::write_c3_table(
+#   schema = "omop_athena_nci",
+#   table_name = "vocabulary",
+#   data = vocabulary_stage
+# )
+#
+# caiconnect2::write_c3_table(
+#   schema = "omop_athena_nci",
+#   table_name = "concept_class",
+#   data = concept_class_stage
+# )
+#
+# # Use Case
+#
+# output0 <-
+# concepts_staged2 %>%
+#   dplyr::filter(concept_class_id == 'Root Class') %>%
+#   select(concept_id,
+#          concept_code,
+#          concept_name) %>%
+#   inner_join(concept_ancestor_stage,
+#              by = c("concept_id" = "ancestor_concept_id")) %>%
+#   select(ancestor_id =   concept_id,
+#          ancestor_code = concept_code,
+#          ancestor_name = concept_name,
+#          descendant_concept_id,
+#          min_levels_of_separation,
+#          max_levels_of_separation) %>%
+#   inner_join(concepts_staged2,
+#              by = c("descendant_concept_id" = "concept_id")) %>%
+#   select(ancestor_id,
+#          ancestor_code,
+#          ancestor_name,
+#          descendant_id = descendant_concept_id,
+#          descendant_code = concept_code,
+#          descendant_name = concept_name,
+#          level = min_levels_of_separation) %>%
+#   tidyr::pivot_wider(
+#     id_cols = c(ancestor_id,
+#                 ancestor_code,
+#                 ancestor_name),
+#     names_from = level,
+#     values_from = descendant_name,
+#     values_fn   = list)
+
 
 #
 #     leafs <-
