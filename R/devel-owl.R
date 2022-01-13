@@ -152,6 +152,9 @@ manual_domain_map <-
 #' `concept_class_id` are dependant on the placement of the hierarchy. If it is
 #' the topmost ancestor, it is 'Root' Class. If it is a bottomost descendant, it is
 #' a 'Leaf' Non-Standard Concept. Otherwise the concept is a 'SubClass' Non-Standard Concept.
+#' If there is any value found within the `Concept_Status` field in the nodes csv,
+#' the concept is deprecated in the final concept table.
+#'
 #'
 #' CONCEPT_RELATIONSHIP:
 #' Only asserted relationships are used to generate these csvs. Including
