@@ -374,7 +374,7 @@ process_owl_to_omop <-
       tibble(
         vocabulary_id,
         vocabulary_name,
-        vocabulary_reference = NA_character_,
+        vocabulary_reference = "https://meerapatelmd.github.io/setupNCI/",
         vocabulary_version,
         vocabulary_concept_id = NA_integer_
       )
