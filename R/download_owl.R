@@ -3,8 +3,9 @@
 #'
 #' @description
 #' If a diff is detected at the FTP site involving the
-#' Thesaurus OWL files, the new versions will be downloaded,
-#' extracted, and reported to the console.
+#' Thesaurus OWL files or the `owl_folder` argument and its
+#' file list, the newest version of both NCI Thesaurus OWL files
+#' will be downloaded, extracted, and reported to the console.
 #'
 #' @rdname download_owl
 #'
@@ -24,6 +25,11 @@ download_owl <-
 
 
     }
+
+    key <-
+      c(
+        owl_folder,
+      as.list(list.files(path = owl_folder)))
 
     quietly_bind_rows <-
       function(...,
@@ -46,7 +52,7 @@ rvest::read_html(
 
 cached_ftp_menu <-
 R.cache::loadCache(
-  key = list(""),
+  key = key,
   dirs = "setupNCI/ftp_menu"
 )
 
@@ -121,9 +127,14 @@ if (nrow(diff_df)>0) {
 
     }
 
+    key <-
+      c(
+        owl_folder,
+        as.list(list.files(path = owl_folder)))
+
     R.cache::saveCache(
       object = ftp_menu,
-      key    = list(""),
+      key    = key,
       dirs   = "setupNCI/ftp_menu"
     )
 
