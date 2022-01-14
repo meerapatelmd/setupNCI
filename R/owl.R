@@ -754,6 +754,47 @@ concept_ancestor_stage <-
   bind_rows(roots_list) %>%
   distinct()
 
+# Finding ancestor descendant pairs that
+# have more than 1 level associated to convert to min and maxes
+concept_ancestor_stage_b <-
+  concept_ancestor_stage %>%
+  count(ancestor_concept_id,
+           descendant_concept_id) %>%
+  dplyr::filter(n>1) %>%
+  select(-n) %>%
+  left_join(concept_ancestor_stage,
+            by = c("ancestor_concept_id", "descendant_concept_id")) %>%
+  pivot_longer(cols = c(min_levels_of_separation,
+                        max_levels_of_separation),
+               names_to = "level",
+               values_to = "value") %>%
+  select(-level) %>%
+  group_by(ancestor_concept_id,
+           descendant_concept_id) %>%
+  mutate(min_levels_of_separation =
+           min(value,na.rm=TRUE),
+         max_levels_of_separation =
+           max(value,na.rm=TRUE)) %>%
+  ungroup() %>%
+  select(-value) %>%
+  distinct()
+
+concept_ancestor_stage2 <-
+left_join(
+  concept_ancestor_stage,
+  concept_ancestor_stage_b,
+  by = c("ancestor_concept_id", "descendant_concept_id"),
+  suffix = c("","_updated")) %>%
+mutate(min_levels_of_separation =
+         coalesce(min_levels_of_separation_updated,
+                  min_levels_of_separation),
+       max_levels_of_separation =
+         coalesce(max_levels_of_separation_updated,
+                  max_levels_of_separation)) %>%
+  select(-ends_with("_updated")) %>%
+  distinct()
+
+
 # Concept Synonym
 concept_synonym_stage <-
 node %>%
@@ -791,7 +832,7 @@ output_map <-
   list(
     CONCEPT = concepts_staged2,
     CONCEPT_SYNONYM = concept_synonym_stage2,
-    CONCEPT_ANCESTOR = concept_ancestor_stage,
+    CONCEPT_ANCESTOR = concept_ancestor_stage2,
     CONCEPT_RELATIONSHIP = concept_relationship_stage3,
     VOCABULARY = vocabulary_stage,
     RELATIONSHIP = relationship_stage,
