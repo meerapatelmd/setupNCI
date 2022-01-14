@@ -8,6 +8,7 @@ download_owl(owl_folder = "/Users/mpatel/terminology/NCIT")
 }
 \description{
 If a diff is detected at the FTP site involving the
-Thesaurus OWL files, the new versions will be downloaded,
-extracted, and reported to the console.
+Thesaurus OWL files or the \code{owl_folder} argument and its
+file list, the newest version of both NCI Thesaurus OWL files
+will be downloaded, extracted, and reported to the console.
 }
