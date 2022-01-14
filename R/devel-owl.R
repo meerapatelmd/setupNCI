@@ -139,32 +139,6 @@ manual_domain_map <-
 #' CSV files
 #'
 #' @details
-#'
-#'                                           +------------+       +------------+
-#'                                           |            |       |  Concept   |
-#'                       +-----------+   +-->|  Concept   |------>|   Class    |
-#'                       |           |   |   |            |       |            |
-#'                   +-->|   Node    |---+   +------------+       +------------+
-#'                   |   |           |   |   +------------+
-#'                   |   +-----------+   |   |  Concept   |       +------------+
-#'   xxxxxxxxxxx     |                   +-->|  Synonym   |       |            |
-#'  x~~~~~~~~~~~x    |                       |            |       | Vocabulary |
-#' x~~~~ OWL ~~~~x---+                       +------------+       |            |
-#'  xx~~~~~~~~~xx    |                                            +------------+
-#'    xxxxxxxxx      |
-#'                   |   +-----------+      +--------------+      +------------+
-#'                   |   |           |      |   Concept    |      |            |
-#'                   +-->|   Edge    +----->| Relationship |----->|Relationship|
-#'                       |           |      |              |      |            |
-#'                       +-----------+      +------+-------+      +------------+
-#'                                                 |
-#'                                                 v
-#'                                           +------------+
-#'                                           |  Concept   |
-#'                                           |  Ancestor  |
-#'                                           |            |
-#'                                           +------------+
-#'
 #' The OWL files are first processed into the Neo4j nodes and edges csvs
 #' using the `process_owl_to_neo4j` function in this package. These csvs are then
 #' processed further into OMOP format Vocabulary table csvs: CONCEPT, CONCEPT_SYNONYM,
