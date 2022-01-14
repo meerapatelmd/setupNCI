@@ -12,6 +12,7 @@
 #' @export
 #' @import rvest
 #' @import cli
+#' @import tidyverse
 
 download_owl <-
   function(owl_folder    = "/Users/mpatel/terminology/NCIT") {
@@ -24,12 +25,22 @@ download_owl <-
 
     }
 
+    quietly_bind_rows <-
+      function(...,
+               .id = NULL) {
+
+        suppressMessages(
+        dplyr::bind_rows(
+          ...,
+          .id = .id
+        ))
+      }
 
 ftp_menu <-
 rvest::read_html(
   x = "https://evs.nci.nih.gov/ftp1/NCI_Thesaurus") %>%
   rvest::html_table() %>%
-  bind_rows() %>%
+  quietly_bind_rows() %>%
   select(Name,
          `Last modified`)
 
@@ -88,6 +99,8 @@ if (nrow(diff_df)>0) {
         remove = FALSE
       ) %>%
       distinct(Version) %>%
+      arrange(desc(Version)) %>%
+      dplyr::filter(row_number()==1) %>%
       unlist() %>%
       unname()
 
