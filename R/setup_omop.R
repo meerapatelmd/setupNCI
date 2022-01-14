@@ -1,4 +1,22 @@
-
+#' @title
+#' Setup OMOP
+#'
+#' @description
+#' Instantiate a Postgres OMOP Vocabulary
+#' database from the csvs created by the `process_owl_to_omop`
+#' function.
+#'
+#' @rdname setup_omop
+#' @export
+#' @import tidyverse
+#' @import rlang
+#' @import pg13
+#' @import cli
+#' @import secretary
+#' @import glue
+#' @importFrom xfun sans_ext
+#' @importFrom SqlRender render
+#' @importFrom prettyunits pretty_dt
 
 
 
