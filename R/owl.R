@@ -243,8 +243,9 @@ process_owl_to_omop <-
 
     classification <-
       edge %>%
-      dplyr::filter(rel_type == 'subClassOf',
-                    rel_cat == 'asserted') %>%
+      dplyr::filter(rel_type == 'subClassOf' # ,
+                    # rel_cat == 'asserted'
+                    ) %>%
       transmute(
         concept_code_1 = source,
         relationship_id = 'Is a',
@@ -257,8 +258,9 @@ process_owl_to_omop <-
 
     classification_b <-
       edge %>%
-      dplyr::filter(rel_type == 'subClassOf',
-                    rel_cat == 'asserted') %>%
+      dplyr::filter(rel_type == 'subClassOf'# ,
+                    #rel_cat == 'asserted'
+                    ) %>%
       transmute(
         concept_code_1 = target,
         relationship_id ='Subsumes',
@@ -271,8 +273,9 @@ process_owl_to_omop <-
 
     relationships <-
       edge %>%
-      dplyr::filter(rel_type != 'subClassOf',
-                    rel_cat == 'asserted') %>%
+      dplyr::filter(rel_type != 'subClassOf'#,
+                    #rel_cat == 'asserted'
+                    ) %>%
       transmute(
         concept_code_1 = source,
         relationship_id = rel_type,
