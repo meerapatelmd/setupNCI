@@ -419,11 +419,8 @@ process_owl_to_omop <-
                  concept_name = concept_name_2,
                  concept_class_id = concept_class_id_2,
                  domain_id = domain_id_2)) %>%
+      mutate(domain_id = "Observation") %>%
       distinct() %>%
-      mutate(domain_id =
-               ifelse(is.na(domain_id),
-                      "Observation",
-                      domain_id)) %>%
     left_join(
       tibble::tribble(
         ~`concept_class_id`, ~`standard_concept`,
@@ -577,7 +574,7 @@ process_owl_to_omop <-
 
       j <- j+1
 
-      cli::cli_bullets(names(roots_list)[j])
+      secretary::typewrite_bold(names(roots_list)[j])
       secretary::typewrite_progress(
         iteration = j,
         total = length(roots)
@@ -667,9 +664,32 @@ process_owl_to_omop <-
 
       }
 
+
+      quiet_left_join <-
+        function(x,
+                 y,
+                 by = NULL,
+                 copy = FALSE,
+                 suffix = c(".x", ".y"),
+                 ...,
+                 keep = FALSE) {
+
+          suppressMessages(
+          left_join(
+            x = x,
+            y = y,
+            by = by,
+            copy = copy,
+            suffix = suffix,
+            keep = keep,
+            ...
+          ))
+
+        }
+
       output3 <-
       output2 %>%
-        reduce(left_join) %>%
+        reduce(quiet_left_join) %>%
         select(starts_with("child")) %>%
         distinct() %>%
         rename_all(str_remove_all, "child_") %>%
@@ -772,8 +792,8 @@ output_map <-
     CONCEPT_RELATIONSHIP = concept_relationship_stage3,
     VOCABULARY = vocabulary_stage,
     RELATIONSHIP = relationship_stage,
-    CONCEPT_CLASS = concept_class_stage
-  )
+    CONCEPT_CLASS = concept_class_stage) %>%
+  map(distinct)
 
 
 for (i in seq_along(output_map)) {
