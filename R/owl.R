@@ -763,7 +763,8 @@ for (i in seq_along(output_map)) {
   readr::write_csv(
     x = output_map[[i]],
     file = file.path(omop_folder, xfun::with_ext(names(output_map)[i], "csv")),
-    na = ''
+    na = '',
+    quote = "all"
   )
 
 
@@ -784,4 +785,7 @@ output_map %>%
 
 }
 
-}
+  }
+
+
+
