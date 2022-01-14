@@ -35,8 +35,8 @@ If there is any value found within the \code{Concept_Status} field in the nodes 
 the concept is deprecated in the final concept table.
 
 CONCEPT_RELATIONSHIP:
-Only asserted relationships are used to generate these csvs. Including
-the inherited and annotated relationships introduced too much noise.
+All relationships (asserted, inherited, and annotation) are used to generate these csvs.
+The exact \code{rel_type} from the source edge csv is lost in this processing.
 
 CONCEPT_SYNONYM: All language concepts id are 4180186, only
 concept synonyms in the \code{FULL_SYN} source field that did not have a
