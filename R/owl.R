@@ -222,13 +222,15 @@ process_owl_to_omop <-
     readr::read_csv(file =
                       file.path(neo4j_folder,
                                 nci_version,
-                                "node.csv"))
+                                "node.csv"),
+                    show_col_types = FALSE)
 
     edge <-
       readr::read_csv(file =
                         file.path(neo4j_folder,
                                   nci_version,
-                                  "edge.csv"))
+                                  "edge.csv"),
+                      show_col_types = FALSE)
 
 
 
@@ -778,6 +780,8 @@ for (i in seq_along(output_map)) {
 
 
 }
+
+cli::cli_inform("{cli::symbol$tick} OMOP Tables available at '{omop_folder}'")
 
 print(
 output_map %>%
