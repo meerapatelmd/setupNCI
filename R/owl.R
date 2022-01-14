@@ -561,9 +561,18 @@ process_owl_to_omop <-
                       unname())
 
     j <- 0
+
+    cli::cli_inform("Starting Concept Ancestor processing...")
+
     for (root in roots) {
 
       j <- j+1
+
+      cli::cli_bullets(names(roots_list)[j])
+      secretary::typewrite_progress(
+        iteration = j,
+        total = length(roots)
+      )
 
       output <- list()
 
