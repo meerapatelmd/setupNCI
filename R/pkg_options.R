@@ -22,11 +22,3 @@ pkg_options <- function(...){
   stop_if_reserved(...)
   MYPKGOPTIONS(...)
 }
-
-
-#' Reset global options for pkg
-#'
-#' @export
-pkg_reset() reset(MYPKGOPTIONS)
-
-
