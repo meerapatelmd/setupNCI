@@ -252,6 +252,7 @@ setup_omop <-
       if (nrow(duplicate_rows)>0) {
         secretary::typewrite(
           secretary::enbold(secretary::redTxt("WARNING:")),
+          glue::glue(
           "
           Duplicate rows detected!
               select c.*
@@ -265,7 +266,7 @@ setup_omop <-
               on c2.concept_code = c.concept_code
               order by c.concept_code
               ;
-          "
+          ")
         )
 
 
@@ -275,6 +276,60 @@ setup_omop <-
         secretary::typewrite("No duplicates in the CONCEPT table detected. The unique `concept_id` count equals the unique `concept_code` count.")
 
       }
+    }
+
+    duplicate_rows <-
+      pg13::query(
+        conn = conn,
+        sql_statement =
+          glue::glue(
+            "
+        WITH dupes AS (
+        SELECT dupe.ancestor_concept_id,dupe.descendant_concept_id,COUNT(*)
+        FROM {target_schema}.concept_ancestor dupe
+        GROUP BY dupe.ancestor_concept_id,dupe.descendant_concept_id
+        HAVING COUNT(*)>1
+        )
+
+        SELECT ca.*, dupes.count
+        FROM {target_schema}.concept_ancestor ca
+        INNER JOIN dupes
+        ON dupes.ancestor_concept_id = ca.ancestor_concept_id
+        AND dupes.descendant_concept_id = ca.descendant_concept_id
+        ORDER BY ca.ancestor_concept_id,ca.descendant_concept_id
+        ;
+        ")
+      )
+
+    if (nrow(duplicate_rows)>0) {
+      secretary::typewrite(
+        secretary::enbold(secretary::redTxt("WARNING:")),
+        glue::glue(
+        "
+          Duplicate rows detected!
+        WITH dupes AS (
+        SELECT dupe.ancestor_concept_id,dupe.descendant_concept_id,COUNT(*)
+        FROM {target_schema}.concept_ancestor dupe
+        GROUP BY dupe.ancestor_concept_id,dupe.descendant_concept_id
+        HAVING COUNT(*)>1
+        )
+
+        SELECT ca.*, dupes.count
+        FROM {target_schema}.concept_ancestor ca
+        INNER JOIN dupes
+        ON dupes.ancestor_concept_id = ca.ancestor_concept_id
+        AND dupes.descendant_concept_id = ca.descendant_concept_id
+        ORDER BY ca.ancestor_concept_id,ca.descendant_concept_id
+        ;
+          ")
+      )
+
+
+
+    } else {
+
+      secretary::typewrite("No duplicates in the CONCEPT_ANCESTOR table detected. Each `ancestor_concept_id` and `descendant_concept_id` combination maps to 1 unique `min_levels_of_separation` and `max_levels_of_separation` combination.")
+
     }
 
     if ("log" %in% steps) {
