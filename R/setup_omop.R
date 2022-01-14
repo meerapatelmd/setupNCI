@@ -68,7 +68,7 @@ setup_omop <-
               --HINT DISTRIBUTE ON RANDOM
               CREATE TABLE {schema}.concept (
                 concept_id			INTEGER			NOT NULL ,
-                concept_name			VARCHAR(255)	NOT NULL ,
+                concept_name			text	NOT NULL ,
                 domain_id				VARCHAR(20)		NOT NULL ,
                 vocabulary_id			VARCHAR(20)		NOT NULL ,
                 concept_class_id		VARCHAR(20)		NOT NULL ,
@@ -76,7 +76,7 @@ setup_omop <-
                 concept_code			VARCHAR(50)		NOT NULL ,
                 valid_start_date		DATE			NOT NULL ,
                 valid_end_date		DATE			NOT NULL ,
-                invalid_reason		VARCHAR(1)		NULL
+                invalid_reason		VARCHAR(5)		NULL
               )
               ;
               --HINT DISTRIBUTE ON RANDOM
@@ -125,7 +125,7 @@ setup_omop <-
               --HINT DISTRIBUTE ON RANDOM
               CREATE TABLE {schema}.concept_synonym (
                 concept_id			INTEGER			NOT NULL,
-                concept_synonym_name	VARCHAR(1000)	NOT NULL,
+                concept_synonym_name	text	NOT NULL,
                 language_concept_id	INTEGER			NOT NULL
               )
               ;
@@ -183,7 +183,8 @@ setup_omop <-
         table_name <- table_names[i]
 
 
-        sql <- SqlRender::render("COPY @schema.@tableName FROM '@vocabulary_file' CSV HEADER QUOTE E'\\b' NULL AS '';",
+        sql <- SqlRender::render(
+           "COPY @schema.@tableName FROM '@vocabulary_file' CSV HEADER QUOTE E'\"' NULL AS '';",
                                  schema = target_schema,
                                  tableName = table_name,
                                  vocabulary_file = vocabulary_file
