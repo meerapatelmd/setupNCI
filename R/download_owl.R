@@ -11,6 +11,7 @@
 #'
 #' @export
 #' @import rvest
+#' @import cli
 
 download_owl <-
   function(owl_folder    = "/Users/mpatel/terminology/NCIT") {
