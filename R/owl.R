@@ -162,8 +162,8 @@ manual_domain_map <-
 #' the concept is deprecated in the final concept table.
 #'
 #' CONCEPT_RELATIONSHIP:
-#' Only asserted relationships are used to generate these csvs. Including
-#' the inherited and annotated relationships introduced too much noise.
+#' All relationships (asserted, inherited, and annotation) are used to generate these csvs.
+#' The exact `rel_type` from the source edge csv is lost in this processing.
 #'
 #' CONCEPT_SYNONYM: All language concepts id are 4180186, only
 #' concept synonyms in the `FULL_SYN` source field that did not have a
@@ -243,8 +243,9 @@ process_owl_to_omop <-
 
     classification <-
       edge %>%
-      dplyr::filter(rel_type == 'subClassOf',
-                    rel_cat == 'asserted') %>%
+      dplyr::filter(rel_type == 'subClassOf' # ,
+                    # rel_cat == 'asserted'
+                    ) %>%
       transmute(
         concept_code_1 = source,
         relationship_id = 'Is a',
@@ -257,8 +258,9 @@ process_owl_to_omop <-
 
     classification_b <-
       edge %>%
-      dplyr::filter(rel_type == 'subClassOf',
-                    rel_cat == 'asserted') %>%
+      dplyr::filter(rel_type == 'subClassOf'# ,
+                    #rel_cat == 'asserted'
+                    ) %>%
       transmute(
         concept_code_1 = target,
         relationship_id ='Subsumes',
@@ -271,8 +273,9 @@ process_owl_to_omop <-
 
     relationships <-
       edge %>%
-      dplyr::filter(rel_type != 'subClassOf',
-                    rel_cat == 'asserted') %>%
+      dplyr::filter(rel_type != 'subClassOf'#,
+                    #rel_cat == 'asserted'
+                    ) %>%
       transmute(
         concept_code_1 = source,
         relationship_id = rel_type,
