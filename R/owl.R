@@ -14,7 +14,7 @@
 #' @importFrom glue glue
 
 process_owl_to_neo4j <-
-  function(nci_version   = "21.11e",
+  function(nci_version,
            owl_folder    = "/Users/mpatel/terminology/NCIT",
            neo4j_folder   = "/Users/mpatel/Desktop/NCIt/neo4j") {
 
@@ -176,7 +176,7 @@ manual_domain_map <-
 #' @import tidyverse
 
 process_owl_to_omop <-
-  function(nci_version   = "21.11e",
+  function(nci_version,
            owl_folder    = "/Users/mpatel/terminology/NCIT",
            neo4j_folder   = "/Users/mpatel/Desktop/NCIt/neo4j",
            omop_folder   = "/Users/mpatel/Desktop/NCIt/omop") {
