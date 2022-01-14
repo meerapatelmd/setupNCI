@@ -1,5 +1,11 @@
 # setupNCI 1.2.0.9000  
 
+## New Features  
+
+* Process NCI Thesaurus OWL files into OMOP Vocabulary tables  
+
+## Bug Fixes  
+
 * Added `conn_fun` evaluation  
 
 * Separated `run_setup()` to `nci` schema to 

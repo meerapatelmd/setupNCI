@@ -139,6 +139,32 @@ manual_domain_map <-
 #' CSV files
 #'
 #' @details
+#'
+#'                                           +------------+       +------------+
+#'                                           |            |       |  Concept   |
+#'                       +-----------+   +-->|  Concept   |------>|   Class    |
+#'                       |           |   |   |            |       |            |
+#'                   +-->|   Node    |---+   +------------+       +------------+
+#'                   |   |           |   |   +------------+
+#'                   |   +-----------+   |   |  Concept   |       +------------+
+#'   xxxxxxxxxxx     |                   +-->|  Synonym   |       |            |
+#'  x~~~~~~~~~~~x    |                       |            |       | Vocabulary |
+#' x~~~~ OWL ~~~~x---+                       +------------+       |            |
+#'  xx~~~~~~~~~xx    |                                            +------------+
+#'    xxxxxxxxx      |
+#'                   |   +-----------+      +--------------+      +------------+
+#'                   |   |           |      |   Concept    |      |            |
+#'                   +-->|   Edge    +----->| Relationship |----->|Relationship|
+#'                       |           |      |              |      |            |
+#'                       +-----------+      +------+-------+      +------------+
+#'                                                 |
+#'                                                 v
+#'                                           +------------+
+#'                                           |  Concept   |
+#'                                           |  Ancestor  |
+#'                                           |            |
+#'                                           +------------+
+#'
 #' The OWL files are first processed into the Neo4j nodes and edges csvs
 #' using the `process_owl_to_neo4j` function in this package. These csvs are then
 #' processed further into OMOP format Vocabulary table csvs: CONCEPT, CONCEPT_SYNONYM,
@@ -155,7 +181,6 @@ manual_domain_map <-
 #' If there is any value found within the `Concept_Status` field in the nodes csv,
 #' the concept is deprecated in the final concept table.
 #'
-#'
 #' CONCEPT_RELATIONSHIP:
 #' Only asserted relationships are used to generate these csvs. Including
 #' the inherited and annotated relationships introduced too much noise.
@@ -168,7 +193,7 @@ manual_domain_map <-
 #'
 #'
 #' @export
-#'
+#' @import tidyverse
 
 process_owl_to_omop <-
   function(nci_version   = "21.11e",
@@ -179,6 +204,39 @@ process_owl_to_omop <-
     vocabulary_id   <- 'CAI NCIt'
     vocabulary_name <- 'CAI NCI Thesaurus'
     vocabulary_version <- nci_version
+
+    if (!dir.exists(omop_folder)) {
+
+      dir.create(omop_folder)
+
+    }
+
+    omop_folder <-
+      file.path(omop_folder,
+                nci_version)
+
+    if (!dir.exists(omop_folder)) {
+
+      dir.create(omop_folder)
+
+    }
+
+    final_files <-
+    c(
+      'CONCEPT_ANCESTOR.csv',
+      'CONCEPT_CLASS.csv',
+      'CONCEPT_RELATIONSHIP.csv',
+      'CONCEPT_SYNONYM.csv',
+      'CONCEPT.csv',
+      'RELATIONSHIP.csv',
+      'VOCABULARY.csv'
+    )
+    final_paths <-
+      file.path(omop_folder,
+                final_files)
+
+
+    if (any(!file.exists(final_paths))) {
 
 
     process_owl_to_neo4j(nci_version = nci_version,
@@ -199,11 +257,6 @@ process_owl_to_omop <-
                                   "edge.csv"))
 
 
-    # OMOP
-    omop_folder <-
-      file.path(omop_folder,
-                nci_version)
-    cave::dir.create_path(omop_folder)
 
 
     classification <-
@@ -412,7 +465,7 @@ process_owl_to_omop <-
                              '1970-01-01',
                              '2099-12-31')),
         by = "concept_code") %>%
-      mutate(vocabulary_id = 'CAI NCIt') %>%
+      mutate(vocabulary_id = vocabulary_id) %>%
       select(all_of(    c(
         'concept_name',
         'domain_id',
@@ -571,7 +624,7 @@ process_owl_to_omop <-
               child = concept_id_2) %>%
             distinct()
 
-          output[[i]] <- x
+           output[[i]] <- x
 
         }
 
@@ -583,6 +636,7 @@ process_owl_to_omop <-
 
 
 
+      # Full Traversal from Root to Leaf
       y <-
         bind_rows(output,
                   .id = "min_levels_of_separation") %>%
@@ -591,6 +645,7 @@ process_owl_to_omop <-
                   min_levels_of_separation = as.integer(min_levels_of_separation),
                   max_levels_of_separation = as.integer(min_levels_of_separation))
 
+      # Direct Parent to Child Relationships
       z <-
         bind_rows(output,
                   .id = "min_levels_of_separation") %>%
@@ -599,8 +654,84 @@ process_owl_to_omop <-
                   min_levels_of_separation = 1,
                   max_levels_of_separation = 1)
 
+      # SubTraversal: Starts at Level 3
+      # At Level 3 the child has a grandparent
+
+      output2 <-
+        output %>%
+        map(select, parent, child)
+
+      for (i in seq_along(output2)) {
+
+        output2[[i]] <-
+          bind_cols(
+          output2[[i]] %>%
+          transmute(prior_child = parent) %>%
+            rename_all(function(x) sprintf("child_%s", i-1)),
+          output2[[i]] %>%
+            rename_all(function(x) sprintf("%s_%s", x, i))
+          )
+
+
+      }
+
+      output3 <-
+      output2 %>%
+        reduce(left_join) %>%
+        select(starts_with("child")) %>%
+        distinct() %>%
+        rename_all(str_remove_all, "child_") %>%
+        rowid_to_column("pathid") %>%
+        pivot_longer(cols = !pathid,
+                     names_to = "level",
+                     values_to = "concept_id",
+                     values_drop_na = TRUE) %>%
+        group_by(pathid) %>%
+        mutate(level_value = max(as.integer(level))) %>%
+        ungroup()
+
+      output3 <-
+        split(output3,
+              output3$pathid)
+
+      subtraverse_path <-
+        function(df) {
+
+          level_value <-
+            unique(df$level_value)
+
+          if (level_value>=3) {
+          subtraversal_range <-
+            1:(level_value-2) # Root ancestor (0) and direct relationships already accounted for
+
+          child <-
+            df %>%
+            dplyr::filter(level == level_value) %>%
+            select(concept_id) %>%
+            unlist() %>%
+            unname()
+
+          df %>%
+            filter(level %in% as.character(subtraversal_range)) %>%
+            transmute(
+                   ancestor_concept_id = concept_id,
+                   descendant_concept_id = child,
+                   min_levels_of_separation = level_value-(as.integer(level)),
+                   max_levels_of_separation = level_value-(as.integer(level)))
+
+          }
+
+        }
+
+      zz <-
+        output3 %>%
+        map(subtraverse_path) %>%
+        bind_rows()
+
+
+
       roots_list[[j]] <-
-        bind_rows(y,z) %>%
+        bind_rows(y,z,zz) %>%
         distinct()
     }
 
@@ -661,6 +792,8 @@ for (i in seq_along(output_map)) {
     na = ''
   )
 
+
+}
 
 }
 
