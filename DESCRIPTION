@@ -18,6 +18,7 @@ URL: https://meerapatelmd.github.io/setupNCI/,
     https://github.com/meerapatelmd/setupNCI/
 BugReports: https://github.com/meerapatelmd/setupNCI/issues/
 Imports:
+    settings,
     dplyr,
     lubridate,
     magrittr,
