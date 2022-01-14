@@ -827,6 +827,8 @@ output_map %>%
 
     cli::cli_inform("{cli::symbol$tick} OMOP Tables already available at '{omop_folder}'. To rerun processing, delete 1 or all files and run function again.")
 
+    cli::cli_inform("Use `setup_omop()` to load csvs into tables.")
+
   }
 
 
