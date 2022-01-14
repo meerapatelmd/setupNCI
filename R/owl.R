@@ -19,7 +19,7 @@ process_owl_to_neo4j <-
            neo4j_folder   = "/Users/mpatel/Desktop/NCIt/neo4j") {
 
     output_folder <-
-    file.path(glue::glue(neo4j_folder),
+    file.path(neo4j_folder,
               nci_version)
 
 
@@ -47,9 +47,15 @@ process_owl_to_neo4j <-
 
         py_run_string(py_file_lines)
 
-    }
+        cli::cli_inform("{cli::symbol$tick} Nodes and Edges available at '{output_folder}'")
 
-    cli::cli_inform("{cli::symbol$tick} Nodes and Edges available at '{output_folder}'")
+    } else {
+
+      cli::cli_inform("{cli::symbol$tick} Nodes and Edges already available at '{output_folder}'. To rerun processing, delete 1 or both files and run function again.")
+
+
+
+    }
 
   }
 
@@ -796,7 +802,9 @@ output_map %>%
   )
 )
 
-}
+    }
+
+    cli::cli_inform("{cli::symbol$tick} OMOP Tables already available at '{omop_folder}'. To rerun processing, delete 1 or all files and run function again.")
 
   }
 
