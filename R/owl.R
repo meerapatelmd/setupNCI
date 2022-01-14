@@ -500,7 +500,8 @@ process_owl_to_omop <-
             'relationship_concept_id'
           )
         )
-      )
+      ) %>%
+      distinct()
 
 
     vocabulary_stage <-
