@@ -15,6 +15,16 @@
 
 download_owl <-
   function(owl_folder    = "/Users/mpatel/terminology/NCIT") {
+
+    if (!dir.exists(owl_folder)) {
+
+
+      dir.create(owl_folder)
+
+
+    }
+
+
 ftp_menu <-
 rvest::read_html(
   x = "https://evs.nci.nih.gov/ftp1/NCI_Thesaurus") %>%
@@ -29,12 +39,23 @@ R.cache::loadCache(
   dirs = "setupNCI/ftp_menu"
 )
 
+if (!is.null(cached_ftp_menu)) {
+
 diff_df <-
 setdiff(cached_ftp_menu,
         ftp_menu) %>%
   dplyr::filter_at(vars(Name),
                    ~grepl(pattern = "_[0-9]{2}.[0-9]{2}[a-z]{1}.OWL.zip$",
                           x = .))
+
+} else {
+
+  diff_df <-
+    ftp_menu %>%
+    dplyr::filter_at(vars(Name),
+                     ~grepl(pattern = "_[0-9]{2}.[0-9]{2}[a-z]{1}.OWL.zip$",
+                            x = .))
+}
 
 if (nrow(diff_df)>0) {
   new_owl_files <-
@@ -114,6 +135,8 @@ if (nrow(diff_df)>0) {
     "No diff was programmatically detected from previous update.
     The OWL files can be downloaded and extracted manually from https://evs.nci.nih.gov/ftp1/NCI_Thesaurus/.")
 
+
+}
 
 }
 
