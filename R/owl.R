@@ -769,6 +769,19 @@ for (i in seq_along(output_map)) {
 
 }
 
+print(
+output_map %>%
+  map(nrow) %>%
+  enframe(
+    name = "Table",
+    value = "Rows"
+  ) %>%
+  mutate(
+    Rows =
+      unlist(Rows)
+  )
+)
+
 }
 
 }
