@@ -131,7 +131,7 @@ if (nrow(diff_df)>0) {
         remove = FALSE
       ) %>%
       distinct(Version) %>%
-      arrange(desc(Version)) %>%
+      arrange(Version) %>%
       dplyr::filter(row_number()==1) %>%
       unlist() %>%
       unname()
