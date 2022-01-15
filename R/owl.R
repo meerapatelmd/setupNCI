@@ -17,6 +17,13 @@ process_owl_to_neo4j <-
   function(nci_version,
            output_folder) {
 
+    stopifnot(!missing(nci_version))
+
+    # py_install("pandas")
+    # py_install("json")
+    # py_install("copy")
+    # py_install("xmltodict")
+
     if (missing(output_folder)) {
 
       output_folder <-
