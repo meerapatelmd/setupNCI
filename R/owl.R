@@ -372,80 +372,6 @@ process_owl_to_omop <-
       unlist() %>%
       unname()
 
-    manual_domain_map <-
-    tibble::tribble(
-      ~`domain_id_1`, ~`domain_id_2`, ~`rel_type`,
-      'Drug','Drug','Chemical_Or_Drug_Has_Mechanism_Of_Action',
-      'Drug','Drug','Chemical_Or_Drug_Has_Physiologic_Effect',
-      'Drug','Drug','Chemotherapy_Regimen_Has_Component',
-      'Drug','Drug','Has_Pharmaceutical_Administration_Method',
-      'Drug','Drug','Has_Pharmaceutical_Intended_Site',
-      'Drug','Drug','Has_Pharmaceutical_Release_Characteristics',
-      'Drug','Drug','Has_Pharmaceutical_Transformation',
-      'Drug','Observation','Chemical_Or_Drug_Affects_Abnormal_Cell',
-      'Drug','Observation','Chemical_Or_Drug_Affects_Gene_Product',
-      'Drug','Observation','Chemical_Or_Drug_Is_Metabolized_By_Enzyme',
-      'Drug','Observation','Chemical_Or_Drug_Plays_Role_In_Biological_Process',
-      'Drug','Observation','Regimen_Has_Accepted_Use_For_Disease',
-      'Observation','Observation','Allele_In_Chromosomal_Location',
-      'Observation','Observation','Allele_Plays_Altered_Role_In_Process',
-      'Observation','Observation','Anatomic_Structure_Has_Location',
-      'Observation','Observation','Anatomic_Structure_Is_Physical_Part_Of',
-      'Observation','Observation','Biological_Process_Has_Associated_Location',
-      'Observation','Observation','Biological_Process_Has_Initiator_Process',
-      'Observation','Observation','Biological_Process_Has_Result_Anatomy',
-      'Observation','Observation','Biological_Process_Has_Result_Biological_Process',
-      'Observation','Observation','Biological_Process_Is_Part_Of_Process',
-      'Observation','Observation','Cytogenetic_Abnormality_Involves_Chromosome',
-      'Observation','Observation','Disease_Excludes_Abnormal_Cell',
-      'Observation','Observation','Disease_Excludes_Cytogenetic_Abnormality',
-      'Observation','Observation','Disease_Excludes_Finding',
-      'Observation','Observation','Disease_Excludes_Metastatic_Anatomic_Site',
-      'Observation','Observation','Disease_Excludes_Molecular_Abnormality',
-      'Observation','Observation','Disease_Excludes_Normal_Cell_Origin',
-      'Observation','Observation','Disease_Excludes_Normal_Tissue_Origin',
-      'Observation','Observation','Disease_Excludes_Primary_Anatomic_Site',
-      'Observation','Observation','Disease_Has_Abnormal_Cell',
-      'Observation','Observation','Disease_Has_Associated_Anatomic_Site',
-      'Observation','Observation','Disease_Has_Associated_Disease',
-      'Observation','Observation','Disease_Has_Cytogenetic_Abnormality',
-      'Observation','Observation','Disease_Has_Finding',
-      'Observation','Observation','Disease_Has_Metastatic_Anatomic_Site',
-      'Observation','Observation','Disease_Has_Molecular_Abnormality',
-      'Observation','Observation','Disease_Has_Normal_Cell_Origin',
-      'Observation','Observation','Disease_Has_Normal_Tissue_Origin',
-      'Observation','Observation','Disease_Has_Primary_Anatomic_Site',
-      'Observation','Observation','Disease_Is_Grade',
-      'Observation','Observation','Disease_Is_Stage',
-      'Observation','Observation','Disease_Mapped_To_Chromosome',
-      'Observation','Observation','Disease_Mapped_To_Gene',
-      'Observation','Observation','Disease_May_Have_Abnormal_Cell',
-      'Observation','Observation','Disease_May_Have_Associated_Disease',
-      'Observation','Observation','Disease_May_Have_Cytogenetic_Abnormality',
-      'Observation','Observation','Disease_May_Have_Finding',
-      'Observation','Observation','Disease_May_Have_Molecular_Abnormality',
-      'Observation','Observation','Disease_May_Have_Normal_Cell_Origin',
-      'Observation','Observation','Disease_May_Have_Normal_Tissue_Origin',
-      'Observation','Observation','Gene_Associated_With_Disease',
-      'Observation','Observation','Gene_Has_Physical_Location',
-      'Observation','Observation','Gene_In_Chromosomal_Location',
-      'Observation','Observation','Gene_Involved_In_Pathogenesis_Of_Disease',
-      'Observation','Observation','Gene_Is_Biomarker_Type',
-      'Observation','Observation','Gene_Is_Element_In_Pathway',
-      'Observation','Observation','Gene_Plays_Role_In_Process',
-      'Observation','Observation','Has_CTCAE_5_Parent',
-      'Observation','Observation','Has_INC_Parent',
-      'Observation','Observation','Molecular_Abnormality_Involves_Gene',
-      'Observation','Observation','Neoplasm_Has_Special_Category',
-      'Procedure','Observation','Procedure_Has_Completely_Excised_Anatomy',
-      'Procedure','Observation','Procedure_Has_Excised_Anatomy',
-      'Procedure','Observation','Procedure_Has_Partially_Excised_Anatomy',
-      'Procedure','Observation','Procedure_Has_Target_Anatomy',
-      'Procedure','Observation','Procedure_May_Have_Completely_Excised_Anatomy',
-      'Procedure','Observation','Procedure_May_Have_Excised_Anatomy',
-      'Procedure','Observation','Procedure_May_Have_Partially_Excised_Anatomy',
-      'Observation','Observation', 'subClassOf'
-    )
 
     pre_domain_map <-
     concept_relationship_stage %>%
@@ -620,19 +546,37 @@ process_owl_to_omop <-
                       unlist() %>%
                       unname())
 
-    j <- 0
+    tmp_folder <-
+      file.path(
+        omop_folder,
+        "tmp"
+      )
 
-    cli::cli_inform("Starting Concept Ancestor processing...")
+    tmp_folder <-
+    makedirs(tmp_folder,
+             verbose = FALSE)
+
+    j <- 0
+    total <- length(roots_list)
+    cli::cli_h1("Processing each Root into {.emph Concept Ancestor} format...")
 
     for (root in roots) {
 
+      jj <- j
       j <- j+1
 
-      secretary::typewrite_bold(names(roots_list)[j])
-      secretary::typewrite_progress(
-        iteration = j,
-        total = length(roots)
-      )
+      tmp_root_file <-
+        file.path(
+          tmp_folder,
+          xfun::with_ext(names(roots_list)[j], "csv")
+        )
+
+      cli::cli_text(
+        "[{as.character(Sys.time())}] {.strong {names(roots_list)[j]}} {sprintf('%s/%s',j, total)} ({paste0(signif(((jj/total) * 100),
+        digits = 2), '%')})")
+
+
+      if (!file.exists(tmp_root_file)) {
 
       output <- list()
 
@@ -787,6 +731,7 @@ process_owl_to_omop <-
 
           }
 
+
         }
 
       zz <-
@@ -799,6 +744,33 @@ process_owl_to_omop <-
       roots_list[[j]] <-
         bind_rows(y,z,zz) %>%
         distinct()
+
+
+      readr::write_csv(x = roots_list[[j]],
+                       file = tmp_root_file,
+                       na = "")
+
+      cli::cli_text(
+        "[{as.character(Sys.time())}] {.strong {names(roots_list)[j]}} {sprintf('%s/%s',j, total)} ({paste0(signif(((j/total) * 100),
+        digits = 2), '%')})")
+
+    } else {
+
+      roots_list[[j]] <-
+        readr::read_csv(
+          file = tmp_root_file,
+          col_types = c("iiii"),
+          na = character()
+        )
+
+      cli::cli_text(
+        "[{as.character(Sys.time())}] {.strong {names(roots_list)[j]}} {sprintf('%s/%s',j, total)} ({paste0(signif(((j/total) * 100),
+        digits = 2), '%')})")
+
+
+    }
+
+
     }
 
 concept_ancestor_stage <-
