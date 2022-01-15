@@ -44,13 +44,6 @@ download_owl <-
     makedirs(folder_path = owl_folder,
              verbose = FALSE)
 
-    if (!dir.exists(owl_folder)) {
-
-
-      dir.create(owl_folder)
-
-
-    }
 
     key <-
       c(
@@ -84,12 +77,23 @@ R.cache::loadCache(
 
 if (!is.null(cached_ftp_menu)) {
 
+  if (!setequal(cached_ftp_menu,
+                ftp_menu)) {
+
 diff_df <-
-setdiff(cached_ftp_menu,
-        ftp_menu) %>%
+  ftp_menu %>%
   dplyr::filter_at(vars(Name),
                    ~grepl(pattern = "_[0-9]{2}.[0-9]{2}[a-z]{1}.OWL.zip$",
                           x = .))
+
+  } else {
+
+    diff_df <-
+      tribble(~`Name`, ~`Last modified`)
+
+
+  }
+
 
 } else {
 
