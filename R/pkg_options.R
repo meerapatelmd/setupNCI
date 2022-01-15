@@ -4,7 +4,7 @@
 #' @import settings
 MYPKGOPTIONS <-
   options_manager(
-    output_folder=NULL
+    output_folder = NULL
   )
 
 
@@ -20,7 +20,7 @@ MYPKGOPTIONS <-
 #'
 #' @export
 #' @import settings
-pkg_options <- function(...){
+pkg_options <- function(...) {
   # protect against the use of reserved words.
   stop_if_reserved(...)
   MYPKGOPTIONS(...)

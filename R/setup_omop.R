@@ -31,27 +31,31 @@ setup_omop <-
            checks = "",
            nci_version,
            log_schema = "public",
-           log_table  = "setup_nci_omop_log",
-           owl_folder    = "/Users/mpatel/terminology/NCIT",
-           neo4j_folder   = "/Users/mpatel/Desktop/NCIt/neo4j",
-           omop_folder   = "/Users/mpatel/Desktop/NCIt/omop") {
-
-
-    process_owl_to_omop(nci_version = nci_version,
-                        owl_folder = owl_folder,
-                        neo4j_folder = neo4j_folder,
-                        omop_folder = omop_folder)
+           log_table = "setup_nci_omop_log",
+           owl_folder = "/Users/mpatel/terminology/NCIT",
+           neo4j_folder = "/Users/mpatel/Desktop/NCIt/neo4j",
+           omop_folder = "/Users/mpatel/Desktop/NCIt/omop") {
+    process_owl_to_omop(
+      nci_version = nci_version,
+      owl_folder = owl_folder,
+      neo4j_folder = neo4j_folder,
+      omop_folder = omop_folder
+    )
 
 
     path_to_csvs <-
-      file.path(omop_folder,
-                nci_version)
+      file.path(
+        omop_folder,
+        nci_version
+      )
     release_version <- nci_version
 
     if (missing(conn)) {
       conn <- eval(rlang::parse_expr(conn_fun))
-      on.exit(pg13::dc(conn = conn, verbose = verbose), add = TRUE,
-              after = TRUE)
+      on.exit(pg13::dc(conn = conn, verbose = verbose),
+        add = TRUE,
+        after = TRUE
+      )
     }
 
     if ("drop_tables" %in% steps) {
@@ -59,11 +63,15 @@ setup_omop <-
         cli::cat_line()
         cli::cat_boxx("Drop Tables", float = "center")
       }
-      if (tolower(target_schema) %in% tolower(pg13::ls_schema(conn = conn,
-                                                              verbose = verbose, render_sql = render_sql))) {
+      if (tolower(target_schema) %in% tolower(pg13::ls_schema(
+        conn = conn,
+        verbose = verbose, render_sql = render_sql
+      ))) {
         if (verbose) {
-          secretary::typewrite(sprintf("Existing '%s' schema found. Dropping tables...",
-                                       target_schema))
+          secretary::typewrite(sprintf(
+            "Existing '%s' schema found. Dropping tables...",
+            target_schema
+          ))
         }
         pg13::drop_cascade(conn = conn, schema = target_schema)
         if (verbose) {
@@ -72,19 +80,22 @@ setup_omop <-
       }
       pg13::create_schema(conn = conn, schema = target_schema)
       if (verbose) {
-        secretary::typewrite(sprintf("'%s' schema created.",
-                                     target_schema))
+        secretary::typewrite(sprintf(
+          "'%s' schema created.",
+          target_schema
+        ))
       }
       if (verbose) {
         secretary::typewrite("Creating tables...")
       }
 
 
-    schema <- target_schema
-    pg13::send(conn = conn,
-               sql_statement =
-                 glue::glue(
-              "
+      schema <- target_schema
+      pg13::send(
+        conn = conn,
+        sql_statement =
+          glue::glue(
+            "
               --HINT DISTRIBUTE ON RANDOM
               CREATE TABLE {schema}.concept (
                 concept_id			INTEGER			NOT NULL ,
@@ -157,13 +168,13 @@ setup_omop <-
                 max_levels_of_separation	INTEGER		NOT NULL
               )
               ;
-              "))
+              "
+          )
+      )
 
-    if (verbose) {
-      secretary::typewrite("Tables created.")
-    }
-
-
+      if (verbose) {
+        secretary::typewrite("Tables created.")
+      }
     }
 
 
@@ -171,7 +182,7 @@ setup_omop <-
       if (verbose) {
         cli::cat_line()
         cli::cat_boxx("Copy",
-                      float = "center"
+          float = "center"
         )
 
         secretary::typewrite("Copying...")
@@ -179,17 +190,17 @@ setup_omop <-
 
       vocabulary_files <-
         c(
-          'CONCEPT_ANCESTOR.csv',
-          'CONCEPT_CLASS.csv',
-          'CONCEPT_RELATIONSHIP.csv',
-          'CONCEPT_SYNONYM.csv',
-          'CONCEPT.csv',
-          'RELATIONSHIP.csv',
-          'VOCABULARY.csv'
+          "CONCEPT_ANCESTOR.csv",
+          "CONCEPT_CLASS.csv",
+          "CONCEPT_RELATIONSHIP.csv",
+          "CONCEPT_SYNONYM.csv",
+          "CONCEPT.csv",
+          "RELATIONSHIP.csv",
+          "VOCABULARY.csv"
         )
 
       table_names <-
-      xfun::sans_ext(vocabulary_files)
+        xfun::sans_ext(vocabulary_files)
 
       paths_to_csvs <-
         path.expand(file.path(
@@ -204,10 +215,10 @@ setup_omop <-
 
 
         sql <- SqlRender::render(
-           "COPY @schema.@tableName FROM '@vocabulary_file' CSV HEADER QUOTE E'\"' NULL AS '';",
-                                 schema = target_schema,
-                                 tableName = table_name,
-                                 vocabulary_file = vocabulary_file
+          "COPY @schema.@tableName FROM '@vocabulary_file' CSV HEADER QUOTE E'\"' NULL AS '';",
+          schema = target_schema,
+          tableName = table_name,
+          vocabulary_file = vocabulary_file
         )
 
         output <-
@@ -234,25 +245,25 @@ setup_omop <-
 
         errors %>%
           purrr::map(~ secretary::typewrite(.,
-                                            tabs = 4,
-                                            timepunched = FALSE
+            tabs = 4,
+            timepunched = FALSE
           ))
       } else {
         secretary::typewrite("All tables copied successfully:")
         table_names %>%
           purrr::map(~ secretary::typewrite(.,
-                                            tabs = 4,
-                                            timepunched = FALSE
+            tabs = 4,
+            timepunched = FALSE
           ))
       }
 
 
       duplicate_rows <-
-      pg13::query(
-        conn = conn,
-        sql_statement =
-          glue::glue(
-        "
+        pg13::query(
+          conn = conn,
+          sql_statement =
+            glue::glue(
+              "
         select c.*
         from {target_schema}.concept c
         INNER JOIN (
@@ -264,14 +275,15 @@ setup_omop <-
         on c2.concept_code = c.concept_code
         order by c.concept_code
         ;
-        ")
-      )
+        "
+            )
+        )
 
-      if (nrow(duplicate_rows)>0) {
+      if (nrow(duplicate_rows) > 0) {
         secretary::typewrite(
           secretary::enbold(secretary::redTxt("WARNING:")),
           glue::glue(
-          "
+            "
           Duplicate rows detected!
               select c.*
               from {target_schema}.concept c
@@ -284,15 +296,11 @@ setup_omop <-
               on c2.concept_code = c.concept_code
               order by c.concept_code
               ;
-          ")
+          "
+          )
         )
-
-
-
       } else {
-
         secretary::typewrite("No duplicates in the CONCEPT table detected. The unique `concept_id` count equals the unique `concept_code` count.")
-
       }
     }
 
@@ -316,14 +324,15 @@ setup_omop <-
         AND dupes.descendant_concept_id = ca.descendant_concept_id
         ORDER BY ca.ancestor_concept_id,ca.descendant_concept_id
         ;
-        ")
+        "
+          )
       )
 
-    if (nrow(duplicate_rows)>0) {
+    if (nrow(duplicate_rows) > 0) {
       secretary::typewrite(
         secretary::enbold(secretary::redTxt("WARNING:")),
         glue::glue(
-        "
+          "
           Duplicate rows detected!
         WITH dupes AS (
         SELECT dupe.ancestor_concept_id,dupe.descendant_concept_id,COUNT(*)
@@ -339,82 +348,84 @@ setup_omop <-
         AND dupes.descendant_concept_id = ca.descendant_concept_id
         ORDER BY ca.ancestor_concept_id,ca.descendant_concept_id
         ;
-          ")
+          "
+        )
       )
-
-
-
     } else {
-
       secretary::typewrite("No duplicates in the CONCEPT_ANCESTOR table detected. Each `ancestor_concept_id` and `descendant_concept_id` combination maps to 1 unique `min_levels_of_separation` and `max_levels_of_separation` combination.")
-
     }
 
     if ("log" %in% steps) {
       if (verbose) {
         cli::cat_line()
         cli::cat_boxx("Log",
-                      float = "center"
+          float = "center"
         )
         secretary::typewrite("Logging...")
       }
 
       new_tables <-
-      pg13::ls_tables(
-        conn = conn,
-        schema = target_schema,
-        verbose =  verbose,
-        render_sql = TRUE
-      )
+        pg13::ls_tables(
+          conn = conn,
+          schema = target_schema,
+          verbose = verbose,
+          render_sql = TRUE
+        )
 
       log_list <-
-        vector(mode = "list",
-               length = length(new_tables)) %>%
+        vector(
+          mode = "list",
+          length = length(new_tables)
+        ) %>%
         set_names(new_tables)
 
       for (new_table in new_tables) {
-
         log_list[[new_table]] <-
-        pg13::query(
-          conn = conn,
-          sql_statement =
-        glue::glue("SELECT COUNT(*) FROM {target_schema}.{new_table};"),
-        verbose = verbose,
-        render_sql = render_sql,
-        checks = checks) %>%
+          pg13::query(
+            conn = conn,
+            sql_statement =
+              glue::glue("SELECT COUNT(*) FROM {target_schema}.{new_table};"),
+            verbose = verbose,
+            render_sql = render_sql,
+            checks = checks
+          ) %>%
           unlist() %>%
           unname()
-
       }
 
       log_list2 <-
-      log_list %>%
-        enframe(name = "Table",
-                value = "Row Count") %>%
+        log_list %>%
+        enframe(
+          name = "Table",
+          value = "Row Count"
+        ) %>%
         mutate(`Row Count` = unlist(`Row Count`))
 
       print(log_list2)
 
       new_log_entry <-
-      bind_cols(
-        tibble(
-          so_datetime = as.character(Sys.time()),
-          so_schema   = target_schema,
-          so_nci_version = nci_version),
+        bind_cols(
+          tibble(
+            so_datetime = as.character(Sys.time()),
+            so_schema = target_schema,
+            so_nci_version = nci_version
+          ),
           log_list2 %>%
             tidyr::pivot_wider(
               names_from = Table,
-              values_from = 'Row Count')
-      )
+              values_from = "Row Count"
+            )
+        )
 
       table_exists <-
-      pg13::table_exists(conn = conn,
-                         schema = log_schema,
-                         table_name = log_table)
+        pg13::table_exists(
+          conn = conn,
+          schema = log_schema,
+          table_name = log_table
+        )
 
 
       if (!table_exists) {
-
         pg13::send(
           conn = conn,
           sql_statement =
@@ -435,11 +446,9 @@ setup_omop <-
               ;
               "
             ),
-           verbose = verbose,
+          verbose = verbose,
           render_sql = render_sql
         )
-
-
       }
 
 
@@ -451,20 +460,18 @@ setup_omop <-
         conn = conn,
         sql_statement =
           glue::glue(
-            "INSERT INTO {log_schema}.{log_table} VALUES({glue::glue_collapse(glue::single_quote(new_log_entry),sep = \",\")});"),
+            "INSERT INTO {log_schema}.{log_table} VALUES({glue::glue_collapse(glue::single_quote(new_log_entry),sep = \",\")});"
+          ),
         verbose = verbose,
         render_sql = render_sql
       )
-
-
-
     }
 
     if ("indices" %in% steps) {
       if (verbose) {
         cli::cat_line()
         cli::cat_boxx("Indices",
-                      float = "center"
+          float = "center"
         )
         secretary::typewrite("Executing indexes...")
       }
@@ -501,7 +508,8 @@ setup_omop <-
         CREATE INDEX idx_concept_ancestor_id_1 ON {schema}.concept_ancestor (ancestor_concept_id ASC);
         CLUSTER {schema}.concept_ancestor USING idx_concept_ancestor_id_1 ;
         CREATE INDEX idx_concept_ancestor_id_2 ON {schema}.concept_ancestor (descendant_concept_id ASC);
-        ")
+        "
+        )
 
 
       sql_statements <-
@@ -515,7 +523,7 @@ setup_omop <-
       start_time <- Sys.time()
       i <- 0
       for (sql_statement in sql_statements) {
-        i <- i+1
+        i <- i + 1
         Sys.sleep(0.5)
         pg13::send(
           conn = conn,
@@ -526,15 +534,20 @@ setup_omop <-
         )
         Sys.sleep(0.5)
         indices_time <-
-          difftime(Sys.time(),
-                   start_time)
+          difftime(
+            Sys.time(),
+            start_time
+          )
         indices_time <-
           prettyunits::pretty_dt(indices_time)
 
         percent_progress <-
           paste0(
-            formatC(round(i/length(sql_statements) * 100, digits = 1), format = "f",
-                    digits = 1), "%")
+            formatC(round(i / length(sql_statements) * 100, digits = 1),
+              format = "f",
+              digits = 1
+            ), "%"
+          )
 
         secretary::typewrite(glue::glue("{percent_progress} completed..."))
         secretary::typewrite(glue::glue("{indices_time} elapsed..."))
@@ -543,8 +556,10 @@ setup_omop <-
       stop_time <- Sys.time()
 
       indices_time <-
-        difftime(stop_time,
-                 start_time)
+        difftime(
+          stop_time,
+          start_time
+        )
 
       indices_time <-
         prettyunits::pretty_dt(indices_time)
@@ -556,7 +571,7 @@ setup_omop <-
       if (verbose) {
         cli::cat_line()
         cli::cat_boxx("Constraints",
-                      float = "center"
+          float = "center"
         )
         secretary::typewrite("Executing constraints...")
       }
@@ -594,7 +609,8 @@ setup_omop <-
                 ALTER TABLE {schema}.concept ADD CONSTRAINT chk_c_invalid_reason CHECK (COALESCE(invalid_reason,'D') in ('D','U'));
                 ALTER TABLE {schema}.concept_relationship ADD CONSTRAINT chk_cr_invalid_reason CHECK (COALESCE(invalid_reason,'D')='D');
                 ALTER TABLE {schema}.concept_synonym ADD CONSTRAINT chk_csyn_concept_synonym_name CHECK (concept_synonym_name <> '');
-                ")
+                "
+      )
 
 
       sql_statements <-
@@ -619,15 +635,20 @@ setup_omop <-
         )
 
         constraint_time <-
-          difftime(Sys.time(),
-                   start_time)
+          difftime(
+            Sys.time(),
+            start_time
+          )
         constraint_time <-
           prettyunits::pretty_dt(constraint_time)
 
         percent_progress <-
           paste0(
-            formatC(round(i/length(sql_statements) * 100, digits = 1), format = "f",
-                    digits = 1), "%")
+            formatC(round(i / length(sql_statements) * 100, digits = 1),
+              format = "f",
+              digits = 1
+            ), "%"
+          )
 
         secretary::typewrite(glue::glue("{percent_progress} completed..."))
         secretary::typewrite(glue::glue("{constraint_time} elapsed..."))
@@ -636,17 +657,14 @@ setup_omop <-
       stop_time <- Sys.time()
 
       constraint_time <-
-        difftime(stop_time,
-                 start_time)
+        difftime(
+          stop_time,
+          start_time
+        )
 
       constraint_time <-
         prettyunits::pretty_dt(constraint_time)
 
       secretary::typewrite(glue::glue("Constraints complete! [{constraint_time}]"))
     }
-
-
-
-
-
   }

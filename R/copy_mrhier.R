@@ -190,7 +190,8 @@ copy_mrhier <-
         conn = conn,
         sql_statement =
           glue::glue(
-            "SELECT * FROM {schema}.raw_mrhier OFFSET (SELECT count(*) FROM {schema}.raw_mrhier)-1;"),
+            "SELECT * FROM {schema}.raw_mrhier OFFSET (SELECT count(*) FROM {schema}.raw_mrhier)-1;"
+          ),
         verbose = verbose,
         render_sql = render_sql,
         checks = ""
