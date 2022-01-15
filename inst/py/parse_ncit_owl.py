@@ -11,7 +11,7 @@ import xmltodict
 nci_version   = "{{{nci_version}}}"  
 owl_folder    = "{{{owl_folder}}}"
 base_folder   = "{{{neo4j_folder}}}"
-output_folder = os.path.join(base_folder, nci_version)
+output_folder = base_folder
 json_folder   = os.path.join(output_folder, "json")
 
 os.makedirs(output_folder, exist_ok=True)
