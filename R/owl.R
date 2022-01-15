@@ -15,28 +15,63 @@
 
 process_owl_to_neo4j <-
   function(nci_version,
-           owl_folder    = "/Users/mpatel/terminology/NCIT",
-           neo4j_folder   = "/Users/mpatel/Desktop/NCIt/neo4j") {
+           output_folder) {
 
-    output_folder <-
-    file.path(neo4j_folder,
+    stopifnot(!missing(nci_version))
+
+    # py_install("pandas")
+    # py_install("json")
+    # py_install("copy")
+    # py_install("xmltodict")
+
+    if (missing(output_folder)) {
+
+      output_folder <-
+        pkg_options("output_folder")
+
+      if (is.null(output_folder)) {
+
+        stop(
+          "`output_folder` value is required or be globally set using `pkg_options()`.",
+          call. = FALSE
+        )
+
+
+      }
+
+    }
+
+    owl_folder <-
+      file.path(output_folder,
+                "owl")
+
+    owl_folder <-
+      makedirs(folder_path = owl_folder,
+               verbose = FALSE)
+
+
+    neo4j_folder <-
+    file.path(output_folder,
+              "neo4j",
               nci_version)
 
+    neo4j_folder <-
+      makedirs(folder_path = neo4j_folder,
+               verbose = FALSE)
 
-    any_output_missing <-
-      function(output_folder) {
+    any_neo4j_file_missing <-
+      function(neo4j_folder) {
 
         any(
           sapply(
-            file.path(output_folder,
+            file.path(neo4j_folder,
                       c("node.csv", "edge.csv")),
             file.exists,
             USE.NAMES = FALSE)==FALSE)
 
       }
 
-    if (!dir.exists(output_folder)|
-        (dir.exists(output_folder)&any_output_missing(output_folder=output_folder))) {
+    if (any_neo4j_file_missing(neo4j_folder = neo4j_folder)) {
 
         py_file <-
           system.file(package = "setupNCI", "py", "parse_ncit_owl.py")
@@ -47,11 +82,11 @@ process_owl_to_neo4j <-
 
         py_run_string(py_file_lines)
 
-        cli::cli_inform("{cli::symbol$tick} Nodes and Edges available at '{output_folder}'")
+        cli::cli_inform("{cli::symbol$tick} Nodes and Edges available at '{neo4j_folder}'")
 
     } else {
 
-      cli::cli_inform("{cli::symbol$tick} Nodes and Edges already available at '{output_folder}'. To rerun processing, delete 1 or both files and run function again.")
+      cli::cli_inform("{cli::symbol$tick} Nodes and Edges already available at '{neo4j_folder}'. To rerun processing, delete 1 or both files and run function again.")
 
 
 
@@ -177,29 +212,48 @@ manual_domain_map <-
 
 process_owl_to_omop <-
   function(nci_version,
-           owl_folder    = "/Users/mpatel/terminology/NCIT",
-           neo4j_folder   = "/Users/mpatel/Desktop/NCIt/neo4j",
-           omop_folder   = "/Users/mpatel/Desktop/NCIt/omop") {
+           output_folder) {
 
     vocabulary_id   <- 'CAI NCIt'
     vocabulary_name <- 'CAI NCI Thesaurus'
     vocabulary_version <- nci_version
 
-    if (!dir.exists(omop_folder)) {
+    if (missing(output_folder)) {
 
-      dir.create(omop_folder)
+      output_folder <-
+        pkg_options("output_folder")
+
+      if (is.null(output_folder)) {
+
+        stop(
+          "`output_folder` value is required or be globally set using `pkg_options()`.",
+          call. = FALSE
+        )
+
+
+      }
 
     }
 
-    omop_folder <-
-      file.path(omop_folder,
+    owl_folder <-
+      file.path(output_folder,
+                "owl")
+
+
+    neo4j_folder <-
+      file.path(output_folder,
+                "neo4j",
                 nci_version)
 
-    if (!dir.exists(omop_folder)) {
 
-      dir.create(omop_folder)
+    omop_folder <-
+      file.path(output_folder,
+                "omop",
+                nci_version)
 
-    }
+    omop_folder <-
+      makedirs(folder_path = omop_folder,
+               verbose = FALSE)
 
     final_files <-
     c(
@@ -220,21 +274,18 @@ process_owl_to_omop <-
 
 
     process_owl_to_neo4j(nci_version = nci_version,
-                owl_folder = owl_folder,
-                neo4j_folder = neo4j_folder)
+                         output_folder = output_folder)
 
 
     node <-
     readr::read_csv(file =
                       file.path(neo4j_folder,
-                                nci_version,
                                 "node.csv"),
                     show_col_types = FALSE)
 
     edge <-
       readr::read_csv(file =
                         file.path(neo4j_folder,
-                                  nci_version,
                                   "edge.csv"),
                       show_col_types = FALSE)
 

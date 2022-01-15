@@ -16,15 +16,34 @@
 #' @import tidyverse
 
 download_owl <-
-  function(owl_folder    = "/Users/mpatel/terminology/NCIT") {
-
-    if (!dir.exists(owl_folder)) {
+  function(output_folder) {
 
 
-      dir.create(owl_folder)
+    if (missing(output_folder)) {
 
+      output_folder <-
+      pkg_options("output_folder")
+
+      if (is.null(output_folder)) {
+
+        stop(
+          "`output_folder` value is required or be globally set using `pkg_options()`.",
+          call. = FALSE
+        )
+
+
+      }
 
     }
+
+    owl_folder <-
+      file.path(output_folder,
+                "owl")
+
+    owl_folder <-
+    makedirs(folder_path = owl_folder,
+             verbose = FALSE)
+
 
     key <-
       c(
@@ -58,12 +77,23 @@ R.cache::loadCache(
 
 if (!is.null(cached_ftp_menu)) {
 
+  if (!setequal(cached_ftp_menu,
+                ftp_menu)) {
+
 diff_df <-
-setdiff(cached_ftp_menu,
-        ftp_menu) %>%
+  ftp_menu %>%
   dplyr::filter_at(vars(Name),
                    ~grepl(pattern = "_[0-9]{2}.[0-9]{2}[a-z]{1}.OWL.zip$",
                           x = .))
+
+  } else {
+
+    diff_df <-
+      tribble(~`Name`, ~`Last modified`)
+
+
+  }
+
 
 } else {
 
@@ -105,7 +135,7 @@ if (nrow(diff_df)>0) {
         remove = FALSE
       ) %>%
       distinct(Version) %>%
-      arrange(desc(Version)) %>%
+      arrange(Version) %>%
       dplyr::filter(row_number()==1) %>%
       unlist() %>%
       unname()
@@ -156,7 +186,7 @@ if (nrow(diff_df)>0) {
 } else {
 
   cli::cli_inform(
-    "No diff was programmatically detected from previous update.
+    "No diff was programmatically detected from previous update ({owl_folder}).
     The OWL files can be downloaded and extracted manually from https://evs.nci.nih.gov/ftp1/NCI_Thesaurus/.")
 
 
