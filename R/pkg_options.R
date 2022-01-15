@@ -1,5 +1,7 @@
 # Variable, global to package's namespace.
-# This function is not exported to user space and does not need to be documented.
+
+#' @keywords internal
+#' @import settings
 MYPKGOPTIONS <-
   options_manager(
     output_folder=NULL
@@ -17,6 +19,7 @@ MYPKGOPTIONS <-
 #' }
 #'
 #' @export
+#' @import settings
 pkg_options <- function(...){
   # protect against the use of reserved words.
   stop_if_reserved(...)
