@@ -4,12 +4,7 @@
 \alias{process_owl_to_omop}
 \title{Process NCI Thesaurus OWL into OMOP Tables}
 \usage{
-process_owl_to_omop(
-  nci_version,
-  owl_folder = "/Users/mpatel/terminology/NCIT",
-  neo4j_folder = "/Users/mpatel/Desktop/NCIt/neo4j",
-  omop_folder = "/Users/mpatel/Desktop/NCIt/omop"
-)
+process_owl_to_omop(nci_version, output_folder)
 }
 \value{
 CSV files

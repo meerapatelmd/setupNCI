@@ -5,11 +5,7 @@
 \title{Process NCI Thesaurus
 OWL Files into Nodes and Edges}
 \usage{
-process_owl_to_neo4j(
-  nci_version,
-  owl_folder = "/Users/mpatel/terminology/NCIT",
-  neo4j_folder = "/Users/mpatel/Desktop/NCIt/neo4j"
-)
+process_owl_to_neo4j(nci_version, output_folder)
 }
 \arguments{
 \item{owl_folder}{Path to the 'Thesaurus.owl' and 'InferredThesaurus.owl' files.}

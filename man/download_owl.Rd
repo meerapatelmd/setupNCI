@@ -4,7 +4,7 @@
 \alias{download_owl}
 \title{Download and Extract NCIt OWL Files}
 \usage{
-download_owl(owl_folder = "/Users/mpatel/terminology/NCIT")
+download_owl(output_folder)
 }
 \description{
 If a diff is detected at the FTP site involving the
