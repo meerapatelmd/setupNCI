@@ -239,24 +239,16 @@ process_owl_to_omop <-
       file.path(output_folder,
                 "owl")
 
-    owl_folder <-
-      makedirs(folder_path = owl_folder,
-               verbose = FALSE)
-
 
     neo4j_folder <-
       file.path(output_folder,
                 "neo4j",
                 nci_version)
 
-    neo4j_folder <-
-      makedirs(folder_path = neo4j_folder,
-               verbose = FALSE)
-
 
     omop_folder <-
       file.path(output_folder,
-                "neo4j",
+                "omop",
                 nci_version)
 
     omop_folder <-
