@@ -92,7 +92,7 @@ download_owl <-
           )
       } else {
         diff_df <-
-          tribble(~`Name`, ~`Last modified`)
+          tibble::tribble(~`Name`, ~`Last modified`)
       }
     } else {
       diff_df <-
@@ -119,7 +119,7 @@ download_owl <-
           remove = FALSE
         ) %>%
         group_by(`OWL Type`) %>%
-        arrange(desc(`Last modified`)) %>%
+        arrange(desc(`Version`)) %>%
         dplyr::filter(row_number() == 1) %>%
         ungroup() %>%
         select(Name) %>%

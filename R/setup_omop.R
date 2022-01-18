@@ -32,15 +32,41 @@ setup_omop <-
            nci_version,
            log_schema = "public",
            log_table = "setup_nci_omop_log",
+           output_folder,
            owl_folder = "/Users/mpatel/terminology/NCIT",
            neo4j_folder = "/Users/mpatel/Desktop/NCIt/neo4j",
            omop_folder = "/Users/mpatel/Desktop/NCIt/omop") {
+
+    if (missing(output_folder)) {
+      output_folder <-
+        pkg_options("output_folder")
+
+      if (is.null(output_folder)) {
+        stop(
+          "`output_folder` value is required or be globally set using `pkg_options()`.",
+          call. = FALSE
+        )
+      }
+    }
+
+
     process_owl_to_omop(
       nci_version = nci_version,
-      owl_folder = owl_folder,
-      neo4j_folder = neo4j_folder,
-      omop_folder = omop_folder
+      output_folder = output_folder
     )
+
+    omop_folder <-
+      file.path(output_folder,
+                "omop")
+    omop_folder <-
+      makedirs(omop_folder,
+               verbose = verbose)
+
+
+    owl_folder <-
+      file.path(output_folder, "owl")
+    neo4j_folder <-
+      file.path(output_folder, "neo4j", "nci_version")
 
 
     path_to_csvs <-
