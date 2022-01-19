@@ -15,7 +15,6 @@
 #' @import secretary
 #' @import glue
 #' @importFrom xfun sans_ext
-#' @importFrom SqlRender render
 #' @importFrom prettyunits pretty_dt
 
 
@@ -237,12 +236,10 @@ setup_omop <-
         table_name <- table_names[i]
 
 
-        sql <- SqlRender::render(
-          "COPY @schema.@tableName FROM '@vocabulary_file' CSV HEADER QUOTE E'\"' NULL AS '';",
-          schema = target_schema,
-          tableName = table_name,
-          vocabulary_file = vocabulary_file
-        )
+        sql <-
+          glue::glue(
+            "COPY {target_schema}.{table_name} FROM '{vocabulary_file}' CSV HEADER QUOTE E'\"' NULL AS '';"
+          )
 
         output <-
           tryCatch(pg13::send(
