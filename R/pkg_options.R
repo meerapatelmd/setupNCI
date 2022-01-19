@@ -3,7 +3,7 @@
 #' @keywords internal
 #' @import settings
 MYPKGOPTIONS <-
-  options_manager(
+  settings::options_manager(
     output_folder = NULL
   )
 
