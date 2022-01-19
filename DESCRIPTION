@@ -28,7 +28,6 @@ Imports:
     rlang (>= 0.1.2),
     rubix,
     rvest,
-    SqlRender,
     stringr,
     tibble,
     utils,
