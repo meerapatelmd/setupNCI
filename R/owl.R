@@ -927,11 +927,28 @@ process_owl_to_omop <-
         ) %>%
         distinct()
 
+      concept_synonym_stage2_b <-
+        concepts_staged2 %>%
+        transmute(
+          concept_id,
+          concept_synonym_name = concept_name,
+          language_concept_id = 4180186
+        ) %>%
+        distinct()
+
+
+      concept_synonym_stage3 <-
+        bind_rows(
+          concept_synonym_stage2,
+          concept_synonym_stage2_b) %>%
+        distinct() %>%
+        arrange(concept_id)
+
 
       output_map <-
         list(
           CONCEPT = concepts_staged2,
-          CONCEPT_SYNONYM = concept_synonym_stage2,
+          CONCEPT_SYNONYM = concept_synonym_stage3,
           CONCEPT_ANCESTOR = concept_ancestor_stage2,
           CONCEPT_RELATIONSHIP = concept_relationship_stage3,
           VOCABULARY = vocabulary_stage,
