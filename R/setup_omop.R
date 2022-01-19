@@ -32,10 +32,7 @@ setup_omop <-
            nci_version,
            log_schema = "public",
            log_table = "setup_nci_omop_log",
-           output_folder,
-           owl_folder = "/Users/mpatel/terminology/NCIT",
-           neo4j_folder = "/Users/mpatel/Desktop/NCIt/neo4j",
-           omop_folder = "/Users/mpatel/Desktop/NCIt/omop") {
+           output_folder) {
 
     if (missing(output_folder)) {
       output_folder <-
