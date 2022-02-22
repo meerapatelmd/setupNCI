@@ -630,8 +630,13 @@ process_owl_to_omop <-
 
         if (!file.exists(tmp_root_file)) {
           output <- list()
+          continue <- TRUE
+          i <- 0
 
-          for (i in 1:10) {
+          while (continue == TRUE) {
+
+            i <- i + 1
+
             if (i == 1) {
               output[[i]] <-
                 concept_relationship_stage3 %>%
@@ -640,80 +645,48 @@ process_owl_to_omop <-
                   concept_id_1 == root
                 ) %>%
                 transmute(
-                  ancestor_concept_id = root,
-                  descendant_concept_id = concept_id_2,
-                  parent = concept_id_1,
-                  child = concept_id_2
+                  ancestor_concept_id_1 = root,
+                  descendant_concept_id_1 = concept_id_2,
+                  ancestor_concept_id_2 = concept_id_2
                 ) %>%
                 distinct()
             } else {
+
               x <-
                 output[[i - 1]] %>%
-                select(parent = child) %>%
-                inner_join(concept_relationship_stage3 %>%
+                select_at(vars(3)) %>%
+                rename_all(function(x) str_replace_all(x, pattern = "^.*$", replacement = "concept_id_1")) %>%
+                inner_join(
+                  concept_relationship_stage3 %>%
                   dplyr::filter(relationship_id == "Subsumes"),
-                by = c("parent" = "concept_id_1")
-                ) %>%
+                  by = "concept_id_1") %>%
                 transmute(
-                  ancestor_concept_id = root,
+                  ancestor_concept_id = concept_id_1,
                   descendant_concept_id = concept_id_2,
-                  parent,
-                  child = concept_id_2
-                ) %>%
+                  next_ancestor_concept_id = concept_id_2) %>%
                 distinct()
 
+              if (nrow(x)==0) {
+
+                continue <- FALSE
+
+              } else {
+
+                colnames(x) <-
+                  c(
+                    sprintf("ancestor_concept_id_%s", i),
+                    sprintf("descendant_concept_id_%s", i),
+                    sprintf("ancestor_concept_id_%s", i+1)
+                  )
+
               output[[i]] <- x
+
+              }
             }
           }
 
-          names(output) <-
-            as.character(1:length(output))
 
-
-
-          # Full Traversal from Root to Leaf
-          y <-
-            bind_rows(output,
-              .id = "min_levels_of_separation"
-            ) %>%
-            transmute(ancestor_concept_id,
-              descendant_concept_id,
-              min_levels_of_separation = as.integer(min_levels_of_separation),
-              max_levels_of_separation = as.integer(min_levels_of_separation)
-            )
-
-          # Direct Parent to Child Relationships
-          z <-
-            bind_rows(output,
-              .id = "min_levels_of_separation"
-            ) %>%
-            transmute(
-              ancestor_concept_id = parent,
-              descendant_concept_id = child,
-              min_levels_of_separation = 1,
-              max_levels_of_separation = 1
-            )
-
-          # SubTraversal: Starts at Level 3
-          # At Level 3 the child has a grandparent
-
-          output2 <-
-            output %>%
-            map(select, parent, child)
-
-          for (i in seq_along(output2)) {
-            output2[[i]] <-
-              bind_cols(
-                output2[[i]] %>%
-                  transmute(prior_child = parent) %>%
-                  rename_all(function(x) sprintf("child_%s", i - 1)),
-                output2[[i]] %>%
-                  rename_all(function(x) sprintf("%s_%s", x, i))
-              )
-          }
-
-
-          quiet_left_join <-
+          quietly_left_join <-
             function(x,
                      y,
                      by = NULL,
@@ -721,6 +694,7 @@ process_owl_to_omop <-
                      suffix = c(".x", ".y"),
                      ...,
                      keep = FALSE) {
+
               suppressMessages(
                 left_join(
                   x = x,
@@ -728,76 +702,108 @@ process_owl_to_omop <-
                   by = by,
                   copy = copy,
                   suffix = suffix,
-                  keep = keep,
-                  ...
+                  ...,
+                  keep = keep
                 )
               )
+
+
             }
-
-          output3 <-
-            output2 %>%
-            reduce(quiet_left_join) %>%
-            select(starts_with("child")) %>%
+          output2 <-
+            output %>%
+            reduce(quietly_left_join) %>%
+            select(starts_with("ancestor_concept_id_")) %>%
+            rename_all(str_remove_all, "ancestor_concept_id_") %>%
             distinct() %>%
-            rename_all(str_remove_all, "child_") %>%
-            rowid_to_column("pathid") %>%
-            pivot_longer(
-              cols = !pathid,
-              names_to = "level",
-              values_to = "concept_id",
-              values_drop_na = TRUE
-            ) %>%
-            group_by(pathid) %>%
-            mutate(level_value = max(as.integer(level))) %>%
-            ungroup()
+            rowid_to_column("rowid")
 
           output3 <-
-            split(
-              output3,
-              output3$pathid
-            )
+            split(output2,
+                  output2$rowid) %>%
+            map(select, -rowid)
 
-          subtraverse_path <-
-            function(df) {
-              level_value <-
-                unique(df$level_value)
 
-              if (level_value >= 3) {
-                subtraversal_range <-
-                  1:(level_value - 2) # Root ancestor (0) and direct relationships already accounted for
+          cli_progress_bar(
+            total = length(output3),
+            format = "\t\t\t\t\t{cli::pb_current}/{cli::pb_total} ETA:{cli::pb_eta}",
+            format_done = "Complete!",
+            format_failed = "Failed!",
+            clear = FALSE
+          )
 
-                child <-
-                  df %>%
-                  dplyr::filter(level == level_value) %>%
-                  select(concept_id) %>%
+          output4 <- list()
+          for (aa in seq_along(output3)) {
+
+            cli::cli_progress_update()
+
+            path_row <-
+              output3[[aa]] %>%
+              tidyr::pivot_longer(cols = everything(),
+                                  names_to = "level_of_separation",
+                                  values_to = "descendant_concept_id",
+                                  values_drop_na = TRUE) %>%
+              select(descendant_concept_id, level_of_separation)
+
+            path_row_out <- list()
+            for (bb in 1:nrow(path_row)) {
+
+              if (bb == 1) {
+              ancestor_concept_id <-
+                path_row %>%
+                dplyr::filter(row_number() == bb) %>%
+                select(descendant_concept_id) %>%
+                unlist() %>%
+                unname()
+
+              path_row_out[[bb]] <-
+              path_row %>%
+                dplyr::slice(bb:nrow(path_row)) %>%
+                transmute(ancestor_concept_id = ancestor_concept_id,
+                          descendant_concept_id,
+                          level_of_separation = as.integer(level_of_separation)-1)
+
+              } else {
+                ancestor_concept_id_bb <-
+                  path_row %>%
+                  dplyr::filter(row_number() == bb) %>%
+                  select(descendant_concept_id) %>%
                   unlist() %>%
                   unname()
 
-                df %>%
-                  filter(level %in% as.character(subtraversal_range)) %>%
-                  transmute(
-                    ancestor_concept_id = concept_id,
-                    descendant_concept_id = child,
-                    min_levels_of_separation = level_value - (as.integer(level)),
-                    max_levels_of_separation = level_value - (as.integer(level))
-                  )
+                path_row_out[[bb]] <-
+                  path_row_out[[bb-1]] %>%
+                  dplyr::slice(-1) %>%
+                  transmute(ancestor_concept_id = ancestor_concept_id_bb,
+                            descendant_concept_id,
+                            level_of_separation = as.integer(level_of_separation)-1)
+
               }
+
+
             }
 
-          zz <-
-            output3 %>%
-            map(subtraverse_path) %>%
-            bind_rows()
+
+            output4[[aa]] <-
+              path_row_out %>%
+              bind_rows()
 
 
 
-          roots_list[[j]] <-
-            bind_rows(y, z, zz) %>%
-            distinct()
+          }
+
+          output5 <-
+            bind_rows(output4) %>%
+            group_by(ancestor_concept_id,
+                     descendant_concept_id) %>%
+            summarize(
+              min_levels_of_separation = min(level_of_separation),
+              max_levels_of_separation = max(level_of_separation),
+              .groups = "drop") %>%
+            ungroup()
 
 
           readr::write_csv(
-            x = roots_list[[j]],
+            x = output5,
             file = tmp_root_file,
             na = ""
           )
@@ -806,34 +812,43 @@ process_owl_to_omop <-
             "[{as.character(Sys.time())}] {.strong {names(roots_list)[j]}} {sprintf('%s/%s',j, total)} ({paste0(signif(((j/total) * 100),
         digits = 2), '%')})"
           )
-        } else {
-          roots_list[[j]] <-
-            readr::read_csv(
-              file = tmp_root_file,
-              col_types = c("iiii"),
-              na = character()
-            )
-
-          cli::cli_text(
-            "[{as.character(Sys.time())}] {.strong {names(roots_list)[j]}} {sprintf('%s/%s',j, total)} ({paste0(signif(((j/total) * 100),
-        digits = 2), '%')})"
-          )
         }
       }
 
+
+      j <- 0
+      roots_list2 <- list()
+      for (root in roots) {
+        jj <- j
+        j <- j + 1
+
+        tmp_root_file <-
+          file.path(
+            tmp_folder,
+            xfun::with_ext(names(roots_list)[j], "csv")
+          )
+
+        roots_list2[[length(roots_list2)+1]] <-
+        readr::read_csv(file = tmp_root_file,
+                        show_col_types = FALSE)
+
+      }
+
       concept_ancestor_stage <-
-        bind_rows(roots_list) %>%
+        bind_rows(roots_list2) %>%
         distinct()
 
       # Finding ancestor descendant pairs that
-      # have more than 1 level associated to convert to min and maxes
+      # have more than 1 level associated to convert to min and maxes.
+      # This data frame will likely be 0 rows, but it is
+      # just a QA measure to ensure that there are no duplicates
       concept_ancestor_stage_b <-
         concept_ancestor_stage %>%
         count(
           ancestor_concept_id,
           descendant_concept_id
         ) %>%
-        dplyr::filter(n > 1) %>%
+        dplyr::filter(n > 1) %>% # Filter will likely result in 0 rows
         select(-n) %>%
         left_join(concept_ancestor_stage,
           by = c("ancestor_concept_id", "descendant_concept_id")
