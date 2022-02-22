@@ -987,7 +987,7 @@ process_owl_to_omop <-
       print(
         output_map %>%
           map(nrow) %>%
-          enframe(
+          tibble::enframe(
             name = "Table",
             value = "Rows"
           ) %>%
