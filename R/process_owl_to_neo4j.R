@@ -14,26 +14,14 @@
 #' @importFrom glue glue
 
 process_owl_to_neo4j <-
-  function(nci_version,
-           output_folder = file.path(getwd(), "inst", "data")) {
+  function(nci_version) {
     stopifnot(!missing(nci_version))
 
-    # py_install("pandas")
-    # py_install("json")
-    # py_install("copy")
-    # py_install("xmltodict")
+    pkg_options(output_folder = file.path(getwd(), "inst", "data"))
 
-    if (missing(output_folder)) {
-      output_folder <-
-        pkg_options("output_folder")
+    output_folder <-
+      pkg_options("output_folder")
 
-      if (is.null(output_folder)) {
-        stop(
-          "`output_folder` value is required or be globally set using `pkg_options()`.",
-          call. = FALSE
-        )
-      }
-    }
 
     owl_folder <-
       file.path(
