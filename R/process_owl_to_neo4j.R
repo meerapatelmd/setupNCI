@@ -15,7 +15,7 @@
 
 process_owl_to_neo4j <-
   function(nci_version,
-           output_folder) {
+           output_folder = file.path(getwd(), "inst", "data")) {
     stopifnot(!missing(nci_version))
 
     # py_install("pandas")

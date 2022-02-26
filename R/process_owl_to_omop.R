@@ -37,7 +37,7 @@
 
 process_owl_to_omop <-
   function(nci_version,
-           output_folder) {
+           output_folder = file.path(getwd(), "inst", "data")) {
     vocabulary_id <- "CAI NCIt"
     vocabulary_name <- "CAI NCI Thesaurus"
     vocabulary_version <- nci_version
