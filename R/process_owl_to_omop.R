@@ -36,23 +36,15 @@
 #' @import tidyverse
 
 process_owl_to_omop <-
-  function(nci_version,
-           output_folder) {
+  function(nci_version) {
     vocabulary_id <- "CAI NCIt"
     vocabulary_name <- "CAI NCI Thesaurus"
     vocabulary_version <- nci_version
 
-    if (missing(output_folder)) {
-      output_folder <-
-        pkg_options("output_folder")
+    pkg_options(output_folder = file.path(getwd(), "inst", "data"))
 
-      if (is.null(output_folder)) {
-        stop(
-          "`output_folder` value is required or be globally set using `pkg_options()`.",
-          call. = FALSE
-        )
-      }
-    }
+    output_folder <-
+      pkg_options("output_folder")
 
     owl_folder <-
       file.path(
@@ -101,8 +93,7 @@ process_owl_to_omop <-
 
     if (any(!file.exists(final_paths))) {
       process_owl_to_neo4j(
-        nci_version = nci_version,
-        output_folder = output_folder
+        nci_version = nci_version
       )
 
 
