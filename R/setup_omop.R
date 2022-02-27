@@ -30,25 +30,16 @@ setup_omop <-
            checks = "",
            nci_version,
            log_schema = "public",
-           log_table = "setup_nci_omop_log",
-           output_folder) {
+           log_table = "setup_nci_omop_log") {
 
-    if (missing(output_folder)) {
-      output_folder <-
-        pkg_options("output_folder")
+    pkg_options(output_folder = file.path(getwd(), "inst", "data"))
 
-      if (is.null(output_folder)) {
-        stop(
-          "`output_folder` value is required or be globally set using `pkg_options()`.",
-          call. = FALSE
-        )
-      }
-    }
+    output_folder <-
+      pkg_options("output_folder")
 
 
     process_owl_to_omop(
-      nci_version = nci_version,
-      output_folder = output_folder
+      nci_version = nci_version
     )
 
     omop_folder <-

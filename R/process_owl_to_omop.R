@@ -537,93 +537,64 @@ process_owl_to_omop <-
             dplyr::distinct() %>%
             rowid_to_column("rowid")
 
-          output3 <-
-            split(output2,
-                  output2$rowid) %>%
-            map(select, -rowid)
+
+          paths_df <-
+            output2 %>%
+            pivot_longer(
+              cols = !rowid,
+              names_to = "levels_of_separation",
+              values_to = "concept_id",
+              values_drop_na = TRUE,
+              names_transform = as.integer
+            )
 
 
-          cli_progress_bar(
-            total = length(output3),
-            format = "\t\t\t\t\t{cli::pb_current}/{cli::pb_total} ETA:{cli::pb_eta}",
-            format_done = "Complete!",
-            format_failed = "Failed!",
-            clear = FALSE
-          )
+          max_level <- max(paths_df$levels_of_separation)
 
-          output4 <- list()
-          for (aa in seq_along(output3)) {
+          tmp_ca <- list()
 
-            cli::cli_progress_update()
+          for (level in 1:max_level) {
 
-            path_row <-
-              output3[[aa]] %>%
-              tidyr::pivot_longer(cols = everything(),
-                                  names_to = "level_of_separation",
-                                  values_to = "descendant_concept_id",
-                                  values_drop_na = TRUE) %>%
-              select(descendant_concept_id, level_of_separation)
+            tmp_ca[[level]] <-
+            paths_df %>%
+              group_by(rowid) %>%
+              dplyr::filter(levels_of_separation == level) %>%
+              ungroup() %>%
+              transmute(rowid,
+                        ancestor_concept_id = concept_id) %>%
+              left_join(paths_df %>%
+                          transmute(
+                            rowid,
+                            descendant_concept_id = concept_id,
+                            levels_of_separation = levels_of_separation - level),
+                        by = "rowid") %>%
+              dplyr::filter(levels_of_separation >= 0)
 
-            path_row_out <- list()
-            for (bb in 1:nrow(path_row)) {
-
-              if (bb == 1) {
-              ancestor_concept_id <-
-                path_row %>%
-                dplyr::filter(row_number() == bb) %>%
-                select(descendant_concept_id) %>%
-                unlist() %>%
-                unname()
-
-              path_row_out[[bb]] <-
-              path_row %>%
-                dplyr::slice(bb:nrow(path_row)) %>%
-                dplyr::transmute(ancestor_concept_id = ancestor_concept_id,
-                          descendant_concept_id,
-                          level_of_separation = as.integer(level_of_separation)-1)
-
-              } else {
-                ancestor_concept_id_bb <-
-                  path_row %>%
-                  dplyr::filter(row_number() == bb) %>%
-                  select(descendant_concept_id) %>%
-                  unlist() %>%
-                  unname()
-
-                path_row_out[[bb]] <-
-                  path_row_out[[bb-1]] %>%
-                  dplyr::slice(-1) %>%
-                  dplyr::transmute(ancestor_concept_id = ancestor_concept_id_bb,
-                            descendant_concept_id,
-                            level_of_separation = as.integer(level_of_separation)-1)
-
-              }
-
-
-            }
-
-
-            output4[[aa]] <-
-              path_row_out %>%
-              dplyr::bind_rows()
 
 
 
           }
 
-          output5 <-
-            dplyr::bind_rows(output4) %>%
+          tmp_ca2 <-
+            bind_rows(tmp_ca) %>%
+            select(-rowid) %>%
+            distinct()
+
+
+          tmp_ca3 <-
+            tmp_ca2 %>%
             group_by(ancestor_concept_id,
                      descendant_concept_id) %>%
-            summarize(
-              min_levels_of_separation = min(level_of_separation),
-              max_levels_of_separation = max(level_of_separation),
-              .groups = "drop") %>%
-            ungroup()
-
+            summarize(min_levels_of_separation =
+                        min(levels_of_separation),
+                      max_levels_of_separation =
+                        max(levels_of_separation),
+                      .groups = "drop") %>%
+            ungroup() %>%
+            distinct()
 
           readr::write_csv(
-            x = output5,
+            x = tmp_ca3,
             file = tmp_root_file,
             na = ""
           )
