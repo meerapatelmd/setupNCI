@@ -32,35 +32,14 @@ setup_omop <-
            log_schema = "public",
            log_table = "setup_nci_omop_log") {
 
-    pkg_options(output_folder = file.path(getwd(), "inst", "data"))
-
-    output_folder <-
-      pkg_options("output_folder")
-
-
-    process_owl_to_omop(
-      nci_version = nci_version
+    path_to_csvs <-
+    system.file(
+      package = "setupNCI",
+      "data",
+      "omop",
+      nci_version
     )
 
-    omop_folder <-
-      file.path(output_folder,
-                "omop")
-    omop_folder <-
-      makedirs(omop_folder,
-               verbose = verbose)
-
-
-    owl_folder <-
-      file.path(output_folder, "owl")
-    neo4j_folder <-
-      file.path(output_folder, "neo4j", "nci_version")
-
-
-    path_to_csvs <-
-      file.path(
-        omop_folder,
-        nci_version
-      )
     release_version <- nci_version
 
     if (missing(conn)) {
