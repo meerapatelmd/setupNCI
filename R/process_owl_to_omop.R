@@ -104,6 +104,7 @@ process_owl_to_omop <-
               neo4j_folder,
               "node.csv"
             ),
+          col_types = readr::cols(.default = "c"),
           show_col_types = FALSE
         )
 
@@ -114,6 +115,7 @@ process_owl_to_omop <-
               neo4j_folder,
               "edge.csv"
             ),
+          col_types = readr::cols(.default = "c"),
           show_col_types = FALSE
         )
 
@@ -126,7 +128,7 @@ process_owl_to_omop <-
           rel_type == "subClassOf" # ,
           # rel_cat == 'asserted'
         ) %>%
-        transmute(
+        dplyr::transmute(
           concept_code_1 = source,
           relationship_id = "Is a",
           relationship_name = "subClassOf (NCIt)",
@@ -142,7 +144,7 @@ process_owl_to_omop <-
           rel_type == "subClassOf" # ,
           # rel_cat == 'asserted'
         ) %>%
-        transmute(
+        dplyr::transmute(
           concept_code_1 = target,
           relationship_id = "Subsumes",
           relationship_name = "Subsumes (CAI)",
@@ -158,7 +160,7 @@ process_owl_to_omop <-
           rel_type != "subClassOf" # ,
           # rel_cat == 'asserted'
         ) %>%
-        transmute(
+        dplyr::transmute(
           concept_code_1 = source,
           relationship_id = rel_type,
           relationship_name = rel_type,
@@ -169,12 +171,12 @@ process_owl_to_omop <-
         )
 
       concept_relationship_stage <-
-        bind_rows(
+        dplyr::bind_rows(
           classification,
           classification_b,
           relationships
         ) %>%
-        left_join(
+        dplyr::left_join(
           node %>%
             select(
               concept_code_1 = code,
@@ -182,7 +184,7 @@ process_owl_to_omop <-
             ),
           by = "concept_code_1"
         ) %>%
-        left_join(
+        dplyr::left_join(
           node %>%
             select(
               concept_code_2 = code,
@@ -190,21 +192,21 @@ process_owl_to_omop <-
             ),
           by = "concept_code_2"
         ) %>%
-        distinct()
+        dplyr::distinct()
 
 
 
       root_class_codes <-
         classification %>%
         dplyr::filter(!(concept_code_2 %in% classification$concept_code_1)) %>%
-        distinct(concept_code_2) %>%
+        dplyr::distinct(concept_code_2) %>%
         unlist() %>%
         unname()
 
       leaf_concept_codes <-
         classification %>%
         dplyr::filter(!(concept_code_1 %in% classification$concept_code_2)) %>%
-        distinct(concept_code_1) %>%
+        dplyr::distinct(concept_code_1) %>%
         unlist() %>%
         unname()
 
@@ -225,11 +227,11 @@ process_owl_to_omop <-
               TRUE ~ "SubClass"
             )
         ) %>%
-        left_join(manual_domain_map, by = "rel_type")
+        dplyr::left_join(manual_domain_map, by = "rel_type")
 
 
       concepts_staged <-
-        bind_rows(
+        dplyr::bind_rows(
           pre_domain_map %>%
             select(
               concept_code = concept_code_1,
@@ -246,8 +248,8 @@ process_owl_to_omop <-
             )
         ) %>%
         mutate(domain_id = "Observation") %>%
-        distinct() %>%
-        left_join(
+        dplyr::distinct() %>%
+        dplyr::left_join(
           tibble::tribble(
             ~`concept_class_id`, ~`standard_concept`,
             "Leaf", NA_character_,
@@ -256,13 +258,13 @@ process_owl_to_omop <-
           ),
           by = "concept_class_id"
         ) %>%
-        left_join(
+        dplyr::left_join(
           node %>%
-            distinct(
+            dplyr::distinct(
               code,
               Concept_Status
             ) %>%
-            transmute(
+            dplyr::transmute(
               concept_code = code,
               invalid_reason =
                 ifelse(!is.na(Concept_Status),
@@ -291,11 +293,11 @@ process_owl_to_omop <-
           "valid_end_date",
           "invalid_reason"
         ))) %>%
-        distinct()
+        dplyr::distinct()
 
       concept_relationship_stage2 <-
         concept_relationship_stage %>%
-        transmute(
+        dplyr::transmute(
           concept_code_1,
           concept_code_2,
           relationship_id,
@@ -303,7 +305,7 @@ process_owl_to_omop <-
           valid_end_date   = "2099-12-31",
           invalid_reason   = NA_character_
         ) %>%
-        distinct() %>%
+        dplyr::distinct() %>%
         select(all_of(
           c(
             "concept_code_1",
@@ -317,7 +319,7 @@ process_owl_to_omop <-
 
       relationship_stage <-
         concept_relationship_stage %>%
-        transmute(
+        dplyr::transmute(
           relationship_id,
           relationship_name,
           is_hierarchical,
@@ -337,7 +339,7 @@ process_owl_to_omop <-
             )
           )
         ) %>%
-        distinct()
+        dplyr::distinct()
 
 
       vocabulary_stage <-
@@ -352,11 +354,11 @@ process_owl_to_omop <-
 
       concept_class_stage <-
         concepts_staged %>%
-        transmute(concept_class_id,
+        dplyr::transmute(concept_class_id,
           concept_class_name = concept_class_id,
           concept_class_concept_id = NA_integer_
         ) %>%
-        distinct()
+        dplyr::distinct()
 
 
       make_concept_id <-
@@ -377,11 +379,11 @@ process_owl_to_omop <-
 
       concept_relationship_stage3 <-
         concept_relationship_stage2 %>%
-        left_join(concepts_staged2 %>%
+        dplyr::left_join(concepts_staged2 %>%
           rename_all(function(x) sprintf("%s_1", x)),
         by = c("concept_code_1")
         ) %>%
-        left_join(concepts_staged2 %>%
+        dplyr::left_join(concepts_staged2 %>%
           rename_all(function(x) sprintf("%s_2", x)),
         by = c("concept_code_2")
         ) %>%
@@ -395,7 +397,7 @@ process_owl_to_omop <-
             "invalid_reason"
           )
         )) %>%
-        distinct()
+        dplyr::distinct()
 
       roots <-
         concepts_staged2 %>%
@@ -462,12 +464,12 @@ process_owl_to_omop <-
                   relationship_id == "Subsumes",
                   concept_id_1 == root
                 ) %>%
-                transmute(
+                dplyr::transmute(
                   ancestor_concept_id_1 = root,
                   descendant_concept_id_1 = concept_id_2,
                   ancestor_concept_id_2 = concept_id_2
                 ) %>%
-                distinct()
+                dplyr::distinct()
             } else {
 
               x <-
@@ -478,11 +480,11 @@ process_owl_to_omop <-
                   concept_relationship_stage3 %>%
                   dplyr::filter(relationship_id == "Subsumes"),
                   by = "concept_id_1") %>%
-                transmute(
+                dplyr::transmute(
                   ancestor_concept_id = concept_id_1,
                   descendant_concept_id = concept_id_2,
                   next_ancestor_concept_id = concept_id_2) %>%
-                distinct()
+                dplyr::distinct()
 
               if (nrow(x)==0) {
 
@@ -514,7 +516,7 @@ process_owl_to_omop <-
                      keep = FALSE) {
 
               suppressMessages(
-                left_join(
+                dplyr::left_join(
                   x = x,
                   y = y,
                   by = by,
@@ -532,7 +534,7 @@ process_owl_to_omop <-
             reduce(quietly_left_join) %>%
             select(starts_with("ancestor_concept_id_")) %>%
             rename_all(str_remove_all, "ancestor_concept_id_") %>%
-            distinct() %>%
+            dplyr::distinct() %>%
             rowid_to_column("rowid")
 
           output3 <-
@@ -576,7 +578,7 @@ process_owl_to_omop <-
               path_row_out[[bb]] <-
               path_row %>%
                 dplyr::slice(bb:nrow(path_row)) %>%
-                transmute(ancestor_concept_id = ancestor_concept_id,
+                dplyr::transmute(ancestor_concept_id = ancestor_concept_id,
                           descendant_concept_id,
                           level_of_separation = as.integer(level_of_separation)-1)
 
@@ -591,7 +593,7 @@ process_owl_to_omop <-
                 path_row_out[[bb]] <-
                   path_row_out[[bb-1]] %>%
                   dplyr::slice(-1) %>%
-                  transmute(ancestor_concept_id = ancestor_concept_id_bb,
+                  dplyr::transmute(ancestor_concept_id = ancestor_concept_id_bb,
                             descendant_concept_id,
                             level_of_separation = as.integer(level_of_separation)-1)
 
@@ -603,14 +605,14 @@ process_owl_to_omop <-
 
             output4[[aa]] <-
               path_row_out %>%
-              bind_rows()
+              dplyr::bind_rows()
 
 
 
           }
 
           output5 <-
-            bind_rows(output4) %>%
+            dplyr::bind_rows(output4) %>%
             group_by(ancestor_concept_id,
                      descendant_concept_id) %>%
             summarize(
@@ -653,8 +655,8 @@ process_owl_to_omop <-
       }
 
       concept_ancestor_stage <-
-        bind_rows(roots_list2) %>%
-        distinct()
+        dplyr::bind_rows(roots_list2) %>%
+        dplyr::distinct()
 
       # Finding ancestor descendant pairs that
       # have more than 1 level associated to convert to min and maxes.
@@ -668,7 +670,7 @@ process_owl_to_omop <-
         ) %>%
         dplyr::filter(n > 1) %>% # Filter will likely result in 0 rows
         select(-n) %>%
-        left_join(concept_ancestor_stage,
+        dplyr::left_join(concept_ancestor_stage,
           by = c("ancestor_concept_id", "descendant_concept_id")
         ) %>%
         pivot_longer(
@@ -692,10 +694,10 @@ process_owl_to_omop <-
         ) %>%
         ungroup() %>%
         select(-value) %>%
-        distinct()
+        dplyr::distinct()
 
       concept_ancestor_stage2 <-
-        left_join(
+        dplyr::left_join(
           concept_ancestor_stage,
           concept_ancestor_stage_b,
           by = c("ancestor_concept_id", "descendant_concept_id"),
@@ -714,7 +716,7 @@ process_owl_to_omop <-
             )
         ) %>%
         select(-ends_with("_updated")) %>%
-        distinct()
+        dplyr::distinct()
 
 
       # Concept Synonym
@@ -746,35 +748,35 @@ process_owl_to_omop <-
           concept_name = Preferred_Name,
           concept_synonym_name = FULL_SYN
         ) %>%
-        distinct()
+        dplyr::distinct()
 
       concept_synonym_stage2 <-
         concept_synonym_stage %>%
-        left_join(concepts_staged2,
+        dplyr::left_join(concepts_staged2,
           by = c("concept_code", "concept_name")
         ) %>%
-        transmute(
+        dplyr::transmute(
           concept_id,
           concept_synonym_name,
           language_concept_id = 4180186
         ) %>%
-        distinct()
+        dplyr::distinct()
 
       concept_synonym_stage2_b <-
         concepts_staged2 %>%
-        transmute(
+        dplyr::transmute(
           concept_id,
           concept_synonym_name = concept_name,
           language_concept_id = 4180186
         ) %>%
-        distinct()
+        dplyr::distinct()
 
 
       concept_synonym_stage3 <-
-        bind_rows(
+        dplyr::bind_rows(
           concept_synonym_stage2,
           concept_synonym_stage2_b) %>%
-        distinct() %>%
+        dplyr::distinct() %>%
         arrange(concept_id)
 
 
@@ -788,7 +790,7 @@ process_owl_to_omop <-
           RELATIONSHIP = relationship_stage,
           CONCEPT_CLASS = concept_class_stage
         ) %>%
-        map(distinct)
+        map(dplyr::distinct)
 
 
       for (i in seq_along(output_map)) {
