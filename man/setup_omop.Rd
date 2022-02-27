@@ -15,8 +15,7 @@ setup_omop(
   checks = "",
   nci_version,
   log_schema = "public",
-  log_table = "setup_nci_omop_log",
-  output_folder
+  log_table = "setup_nci_omop_log"
 )
 }
 \description{
