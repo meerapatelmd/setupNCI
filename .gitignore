@@ -6,4 +6,6 @@
 .owl
 inst/data/owl/Thesaurus.owl
 inst/data/owl/ThesaurusInferred.owl
+*.json
+
 
