@@ -48,17 +48,6 @@ download_owl <-
         as.list(list.files(path = owl_folder))
       )
 
-    quietly_bind_rows <-
-      function(...,
-               .id = NULL) {
-        suppressMessages(
-          dplyr::bind_rows(
-            ...,
-            .id = .id
-          )
-        )
-      }
-
     ftp_menu <-
       rvest::read_html(
         x = "https://evs.nci.nih.gov/ftp1/NCI_Thesaurus"

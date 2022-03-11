@@ -17,7 +17,7 @@ process_owl_to_neo4j <-
   function(nci_version) {
     stopifnot(!missing(nci_version))
 
-    pkg_options(output_folder = file.path(getwd(), "inst", "data"))
+    pkg_options(output_folder = file.path(here::here(), "inst", "data"))
 
     output_folder <-
       pkg_options("output_folder")

@@ -41,7 +41,7 @@ process_owl_to_omop <-
     vocabulary_name <- "CAI NCI Thesaurus"
     vocabulary_version <- nci_version
 
-    pkg_options(output_folder = file.path(getwd(), "inst", "data"))
+    pkg_options(output_folder = file.path(here::here(), "inst", "data"))
 
     output_folder <-
       pkg_options("output_folder")
