@@ -1,8 +1,13 @@
-# setupNCI 1.2.0.9000  
+# setupNCI 1.3.0   
+
+* Added NCI Version 22.02d  
+
 
 ## New Features  
 
 * Process NCI Thesaurus OWL files into OMOP Vocabulary tables  
+
+* `check_owl_version()` that compares FTP version to what is in the installation directory.  
 
 ## Bug Fixes  
 
