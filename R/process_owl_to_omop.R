@@ -215,13 +215,13 @@ process_owl_to_omop <-
         concept_relationship_stage %>%
         mutate(
           concept_class_id_1 =
-            case_when(
+            dplyr::case_when(
               concept_code_1 %in% root_class_codes ~ "Root",
               concept_code_1 %in% leaf_concept_codes ~ "Leaf",
               TRUE ~ "SubClass"
             ),
           concept_class_id_2 =
-            case_when(
+            dplyr::case_when(
               concept_code_2 %in% root_class_codes ~ "Root",
               concept_code_2 %in% leaf_concept_codes ~ "Leaf",
               TRUE ~ "SubClass"
