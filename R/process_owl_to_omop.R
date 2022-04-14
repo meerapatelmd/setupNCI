@@ -186,7 +186,7 @@ process_owl_to_omop <-
         ) %>%
         dplyr::left_join(
           node %>%
-            select(
+            dplyr::select(
               concept_code_2 = code,
               concept_name_2 = Preferred_Name
             ),
@@ -380,11 +380,11 @@ process_owl_to_omop <-
       concept_relationship_stage3 <-
         concept_relationship_stage2 %>%
         dplyr::left_join(concepts_staged2 %>%
-          rename_all(function(x) sprintf("%s_1", x)),
+          dplyr::rename_all(function(x) sprintf("%s_1", x)),
         by = c("concept_code_1")
         ) %>%
         dplyr::left_join(concepts_staged2 %>%
-          rename_all(function(x) sprintf("%s_2", x)),
+          dplyr::rename_all(function(x) sprintf("%s_2", x)),
         by = c("concept_code_2")
         ) %>%
         select(all_of(
@@ -474,9 +474,9 @@ process_owl_to_omop <-
 
               x <-
                 output[[i - 1]] %>%
-                select_at(vars(3)) %>%
-                rename_all(function(x) str_replace_all(x, pattern = "^.*$", replacement = "concept_id_1")) %>%
-                inner_join(
+                dplyr::select_at(dplyr::vars(3)) %>%
+                dplyr::rename_all(function(x) str_replace_all(x, pattern = "^.*$", replacement = "concept_id_1")) %>%
+                dplyr::inner_join(
                   concept_relationship_stage3 %>%
                   dplyr::filter(relationship_id == "Subsumes"),
                   by = "concept_id_1") %>%
@@ -531,16 +531,16 @@ process_owl_to_omop <-
             }
           output2 <-
             output %>%
-            reduce(quietly_left_join) %>%
-            select(starts_with("ancestor_concept_id_")) %>%
-            rename_all(str_remove_all, "ancestor_concept_id_") %>%
+            purrr::reduce(quietly_left_join) %>%
+            dplyr::select(starts_with("ancestor_concept_id_")) %>%
+            dplyr::rename_all(str_remove_all, "ancestor_concept_id_") %>%
             dplyr::distinct() %>%
-            rowid_to_column("rowid")
+            tibble::rowid_to_column("rowid")
 
 
           paths_df <-
             output2 %>%
-            pivot_longer(
+            tidyr::pivot_longer(
               cols = !rowid,
               names_to = "levels_of_separation",
               values_to = "concept_id",
@@ -557,13 +557,13 @@ process_owl_to_omop <-
 
             tmp_ca[[level]] <-
             paths_df %>%
-              group_by(rowid) %>%
+              dplyr::group_by(rowid) %>%
               dplyr::filter(levels_of_separation == level) %>%
-              ungroup() %>%
-              transmute(rowid,
+              dplyr::ungroup() %>%
+              dplyr::transmute(rowid,
                         ancestor_concept_id = concept_id) %>%
-              left_join(paths_df %>%
-                          transmute(
+              dplyr::left_join(paths_df %>%
+                          dplyr::transmute(
                             rowid,
                             descendant_concept_id = concept_id,
                             levels_of_separation = levels_of_separation - level),
@@ -576,22 +576,22 @@ process_owl_to_omop <-
           }
 
           tmp_ca2 <-
-            bind_rows(tmp_ca) %>%
-            select(-rowid) %>%
-            distinct()
+            dplyr::bind_rows(tmp_ca) %>%
+            dplyr::select(-rowid) %>%
+            dplyr::distinct()
 
 
           tmp_ca3 <-
             tmp_ca2 %>%
-            group_by(ancestor_concept_id,
+            dplyr::group_by(ancestor_concept_id,
                      descendant_concept_id) %>%
-            summarize(min_levels_of_separation =
+            dplyr::summarize(min_levels_of_separation =
                         min(levels_of_separation),
                       max_levels_of_separation =
                         max(levels_of_separation),
                       .groups = "drop") %>%
-            ungroup() %>%
-            distinct()
+            dplyr::ungroup() %>%
+            dplyr::distinct()
 
           readr::write_csv(
             x = tmp_ca3,
@@ -640,11 +640,11 @@ process_owl_to_omop <-
           descendant_concept_id
         ) %>%
         dplyr::filter(n > 1) %>% # Filter will likely result in 0 rows
-        select(-n) %>%
+        dplyr::select(-n) %>%
         dplyr::left_join(concept_ancestor_stage,
           by = c("ancestor_concept_id", "descendant_concept_id")
         ) %>%
-        pivot_longer(
+        tidyr::pivot_longer(
           cols = c(
             min_levels_of_separation,
             max_levels_of_separation
@@ -652,8 +652,8 @@ process_owl_to_omop <-
           names_to = "level",
           values_to = "value"
         ) %>%
-        select(-level) %>%
-        group_by(
+        dplyr::select(-level) %>%
+        dplyr::group_by(
           ancestor_concept_id,
           descendant_concept_id
         ) %>%
@@ -663,8 +663,8 @@ process_owl_to_omop <-
           max_levels_of_separation =
             max(value, na.rm = TRUE)
         ) %>%
-        ungroup() %>%
-        select(-value) %>%
+        dplyr::ungroup() %>%
+        dplyr::select(-value) %>%
         dplyr::distinct()
 
       concept_ancestor_stage2 <-
@@ -686,14 +686,14 @@ process_owl_to_omop <-
               max_levels_of_separation
             )
         ) %>%
-        select(-ends_with("_updated")) %>%
+        dplyr::select(-ends_with("_updated")) %>%
         dplyr::distinct()
 
 
       # Concept Synonym
       concept_synonym_stage <-
         node %>%
-        select(
+        dplyr::select(
           code,
           Preferred_Name,
           FULL_SYN
