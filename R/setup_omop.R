@@ -385,7 +385,7 @@ setup_omop <-
 
       log_list2 <-
         log_list %>%
-        enframe(
+        tibble::enframe(
           name = "Table",
           value = "Row Count"
         ) %>%
@@ -394,7 +394,7 @@ setup_omop <-
       print(log_list2)
 
       new_log_entry <-
-        bind_cols(
+        dplyr::bind_cols(
           tibble(
             so_datetime = as.character(Sys.time()),
             so_schema = target_schema,

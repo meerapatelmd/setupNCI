@@ -178,7 +178,7 @@ process_owl_to_omop <-
         ) %>%
         dplyr::left_join(
           node %>%
-            select(
+            dplyr::select(
               concept_code_1 = code,
               concept_name_1 = Preferred_Name
             ),
@@ -213,7 +213,7 @@ process_owl_to_omop <-
 
       pre_domain_map <-
         concept_relationship_stage %>%
-        mutate(
+        dplyr::mutate(
           concept_class_id_1 =
             dplyr::case_when(
               concept_code_1 %in% root_class_codes ~ "Root",
@@ -233,21 +233,21 @@ process_owl_to_omop <-
       concepts_staged <-
         dplyr::bind_rows(
           pre_domain_map %>%
-            select(
+            dplyr::select(
               concept_code = concept_code_1,
               concept_name = concept_name_1,
               concept_class_id = concept_class_id_1,
               domain_id = domain_id_1
             ),
           pre_domain_map %>%
-            select(
+            dplyr::select(
               concept_code = concept_code_2,
               concept_name = concept_name_2,
               concept_class_id = concept_class_id_2,
               domain_id = domain_id_2
             )
         ) %>%
-        mutate(domain_id = "Observation") %>%
+        dplyr::mutate(domain_id = "Observation") %>%
         dplyr::distinct() %>%
         dplyr::left_join(
           tibble::tribble(
@@ -281,8 +281,8 @@ process_owl_to_omop <-
             ),
           by = "concept_code"
         ) %>%
-        mutate(vocabulary_id = vocabulary_id) %>%
-        select(all_of(c(
+        dplyr::mutate(vocabulary_id = vocabulary_id) %>%
+        dplyr::select(dplyr::all_of(c(
           "concept_name",
           "domain_id",
           "vocabulary_id",
@@ -306,7 +306,7 @@ process_owl_to_omop <-
           invalid_reason   = NA_character_
         ) %>%
         dplyr::distinct() %>%
-        select(all_of(
+        dplyr::select(dplyr::all_of(
           c(
             "concept_code_1",
             "concept_code_2",
@@ -327,8 +327,8 @@ process_owl_to_omop <-
           reverse_relationship_id = NA_character_,
           relationship_concept_id = NA_integer_
         ) %>%
-        select(
-          all_of(
+        dplyr::select(
+          dplyr::all_of(
             c(
               "relationship_id",
               "relationship_name",
@@ -368,11 +368,11 @@ process_owl_to_omop <-
 
       concepts_staged2 <-
         concepts_staged %>%
-        mutate(
+        dplyr::mutate(
           concept_id =
             make_concept_id(concept_code)
         ) %>%
-        select(
+        dplyr::select(
           concept_id,
           dplyr::everything()
         )
@@ -387,7 +387,7 @@ process_owl_to_omop <-
           dplyr::rename_all(function(x) sprintf("%s_2", x)),
         by = c("concept_code_2")
         ) %>%
-        select(all_of(
+        dplyr::select(dplyr::all_of(
           c(
             "concept_id_1",
             "concept_id_2",
@@ -402,7 +402,7 @@ process_owl_to_omop <-
       roots <-
         concepts_staged2 %>%
         dplyr::filter(concept_class_id == "Root") %>%
-        select(concept_id) %>%
+        dplyr::select(concept_id) %>%
         unlist() %>%
         unname()
 
@@ -413,7 +413,7 @@ process_owl_to_omop <-
         ) %>%
         set_names(concepts_staged2 %>%
           dplyr::filter(concept_class_id == "Root") %>%
-          select(concept_name) %>%
+          dplyr::select(concept_name) %>%
           unlist() %>%
           unname())
 
@@ -635,7 +635,7 @@ process_owl_to_omop <-
       # just a QA measure to ensure that there are no duplicates
       concept_ancestor_stage_b <-
         concept_ancestor_stage %>%
-        count(
+        dplyr::count(
           ancestor_concept_id,
           descendant_concept_id
         ) %>%
@@ -657,7 +657,7 @@ process_owl_to_omop <-
           ancestor_concept_id,
           descendant_concept_id
         ) %>%
-        mutate(
+        dplyr::mutate(
           min_levels_of_separation =
             min(value, na.rm = TRUE),
           max_levels_of_separation =
@@ -674,14 +674,14 @@ process_owl_to_omop <-
           by = c("ancestor_concept_id", "descendant_concept_id"),
           suffix = c("", "_updated")
         ) %>%
-        mutate(
+        dplyr::mutate(
           min_levels_of_separation =
-            coalesce(
+            dplyr::coalesce(
               min_levels_of_separation_updated,
               min_levels_of_separation
             ),
           max_levels_of_separation =
-            coalesce(
+            dplyr::coalesce(
               max_levels_of_separation_updated,
               max_levels_of_separation
             )
@@ -698,18 +698,18 @@ process_owl_to_omop <-
           Preferred_Name,
           FULL_SYN
         ) %>%
-        separate_rows(FULL_SYN,
+        tidyr::separate_rows(FULL_SYN,
           sep = "[|]{1}"
         ) %>%
-        mutate(
+        dplyr::mutate(
           lc_preferred_name =
             tolower(Preferred_Name)
         ) %>%
-        mutate(
+        dplyr::mutate(
           lc_full_syn =
             tolower(FULL_SYN)
         ) %>%
-        mutate(
+        dplyr::mutate(
           is_synonym =
             lc_preferred_name != lc_full_syn
         ) %>%
@@ -782,7 +782,7 @@ process_owl_to_omop <-
             name = "Table",
             value = "Rows"
           ) %>%
-          mutate(
+          dplyr::mutate(
             Rows =
               unlist(Rows)
           )
