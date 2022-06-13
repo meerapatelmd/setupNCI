@@ -347,14 +347,13 @@ process_owl_to_omop <-
 
       relationship_stage <-
         concept_relationship_stage %>%
-        tibble::rowid_to_column("rowid") %>%
         dplyr::transmute(
           relationship_id,
           relationship_name,
           is_hierarchical,
           defines_ancestry,
           reverse_relationship_id = NA_character_,
-          relationship_concept_id = 7001000000 + rowid
+          relationship_concept_id = NA_integer_
         ) %>%
         dplyr::select(
           dplyr::all_of(
@@ -368,7 +367,10 @@ process_owl_to_omop <-
             )
           )
         ) %>%
-        dplyr::distinct()
+        dplyr::distinct() %>%
+        tibble::rowid_to_column("rowid") %>%
+        dplyr::mutate(relationship_concept_id = 7001000000 + rowid) %>%
+        dplyr::select(-rowid)
 
 
       make_concept_id <-
