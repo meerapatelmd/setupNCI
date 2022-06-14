@@ -91,6 +91,9 @@ process_owl_to_omop <-
       )
 
 
+    # If any of the final files are missing in the
+    # omop version directory, the neo4j files are
+    # processed
     if (any(!file.exists(final_paths))) {
 
       # Metadata Tables VOCABULARY requires
@@ -101,7 +104,7 @@ process_owl_to_omop <-
         tibble(
           vocabulary_id,
           vocabulary_name,
-          vocabulary_reference = "https://meerapatelmd.github.io/setupNCI/",
+          vocabulary_reference = "https://evs.nci.nih.gov/ftp1/NCI_Thesaurus/",
           vocabulary_version,
           vocabulary_concept_id = 7000000001
         )
@@ -123,6 +126,27 @@ process_owl_to_omop <-
           col_types = readr::cols(.default = "c"),
           show_col_types = FALSE
         )
+      # > node
+      # # A tibble: 166,403 × 64
+      # concept_id               code  Semantic_Type Preferred_Name UMLS_CUI FDA_UNII_Code Contributing_So… `Legacy Concep…` FULL_SYN DEFINITION label Concept_Status ALT_DEFINITION NCI_META_CUI
+      # <chr>                    <chr> <chr>         <chr>          <chr>    <chr>         <chr>            <chr>            <chr>    <chr>      <chr> <chr>          <chr>          <chr>
+      #   1 http://ncicb.nci.nih.go… C1000 Amino Acid, … Recombinant A… C1514768 7MGE0HPM2H    FDA              Recombinant_Amp… AMPHIRE… A recombi… Reco… NA             NA             NA
+      # 2 http://ncicb.nci.nih.go… C100… Therapeutic … Cyclophospham… C0279323 NA            NA               Cyclophosphamid… CD(P)TH… NA         Cycl… Obsolete_Conc… NA             NA
+      # 3 http://ncicb.nci.nih.go… C100… Therapeutic … Percutaneous … C3272245 NA            CDISC            NA               PERCUTA… A percuta… Perc… NA             A percutaneou… NA
+      # 4 http://ncicb.nci.nih.go… C100… Therapeutic … Percutaneous … C3272246 NA            CDISC            NA               PERCUTA… A percuta… Perc… NA             A percutaneou… NA
+      # 5 http://ncicb.nci.nih.go… C100… Therapeutic … Percutaneous … C3272247 NA            CDISC            NA               PERCUTA… A percuta… Perc… NA             A percutaneou… NA
+      # 6 http://ncicb.nci.nih.go… C100… Therapeutic … Percutaneous … C3272248 NA            CDISC            NA               PERCUTA… Invasive … Perc… NA             Invasive proc… NA
+      # 7 http://ncicb.nci.nih.go… C100… Therapeutic … Pericardial S… C3272249 NA            CDISC            NA               PERICAR… Removal o… Peri… NA             Removal or re… NA
+      # 8 http://ncicb.nci.nih.go… C100… Health Care … Post-Cardiac … C3272250 NA            CDISC            NA               POST-CA… A procedu… Post… NA             A procedure t… NA
+      # 9 http://ncicb.nci.nih.go… C100… Health Care … Pre-Operative… C3272251 NA            CDISC            NA               PRE-OPE… A procedu… Pre-… NA             A procedure t… NA
+      # 10 http://ncicb.nci.nih.go… C100… Finding       Previously Im… C3272252 NA            CDISC            NA               PREVIOU… The coron… Prev… NA             The coronary … NA
+      # # … with 166,393 more rows, and 50 more variables: PDQ_Open_Trial_Search_ID <chr>, PDQ_Closed_Trial_Search_ID <chr>, NCI_Drug_Dictionary_ID <chr>, Display_Name <chr>,
+      # #   Neoplastic_Status <chr>, PubMedID_Primary_Reference <chr>, CAS_Registry <chr>, Maps_To <chr>, OMIM_Number <chr>, Swiss_Prot <chr>, FDA_Table <chr>, Chemical_Formula <chr>,
+      # #   `NSC Number` <chr>, Publish_Value_Set <chr>, Term_Browser_Value_Set_Description <chr>, Value_Set_Pair <chr>, Extensible_List <chr>, CHEBI_ID <chr>, Accepted_Therapeutic_Use_For <chr>,
+      # #   DesignNote <chr>, GenBank_Accession_Number <chr>, HGNC_ID <chr>, EntrezGene_ID <chr>, `oboInOwl:hasDbXref` <chr>, INFOODS <chr>, USDA_ID <chr>, Unit <chr>, miRBase_ID <chr>,
+      # #   NCBI_Taxon_ID <chr>, SNP_ID <chr>, ClinVar_Variation_ID <chr>, Gene_Encodes_Product <chr>, `ICD-O-3_Code` <chr>, Subsource <chr>, US_Recommended_Intake <chr>, Tolerable_Level <chr>,
+      # #   Nutrient <chr>, Micronutrient <chr>, MGI_Accession_ID <chr>, Use_For <chr>, Homologous_Gene <chr>, PID_ID <chr>, Essential_Amino_Acid <chr>, KEGG_ID <chr>, GO_Annotation <chr>,
+      # #   Macronutrient <chr>, Essential_Fatty_Acid <chr>, BioCarta_ID <chr>, Relative_Enzyme_Activity <chr>, `:LABEL` <chr>
 
       edge <-
         readr::read_csv(
@@ -134,6 +158,21 @@ process_owl_to_omop <-
           col_types = readr::cols(.default = "c"),
           show_col_types = FALSE
         )
+      # > edge
+      # # A tibble: 1,104,754 × 4
+      # source  rel_type                           target rel_cat
+      # <chr>   <chr>                              <chr>  <chr>
+      #   1 C1000   subClassOf                         C1504  asserted
+      # 2 C1000   Concept_In_Subset                  C63923 annotation
+      # 3 C10000  subClassOf                         C61007 asserted
+      # 4 C10000  Chemotherapy_Regimen_Has_Component C405   asserted
+      # 5 C10000  Chemotherapy_Regimen_Has_Component C507   asserted
+      # 6 C10000  Chemotherapy_Regimen_Has_Component C662   asserted
+      # 7 C10000  Chemotherapy_Regimen_Has_Component C770   asserted
+      # 8 C10000  Chemotherapy_Regimen_Has_Component C855   asserted
+      # 9 C100000 subClassOf                         C99521 asserted
+      # 10 C100000 Procedure_Has_Target_Anatomy       C12686 inherited
+      # # … with 1,104,744 more rows
 
 
 
@@ -154,6 +193,21 @@ process_owl_to_omop <-
           is_hierarchical = 1,
           defines_ancestry = 1
         )
+      # > classification
+      # # A tibble: 190,404 × 7
+      # concept_code_1 relationship_id relationship_name rel_type   concept_code_2 is_hierarchical defines_ancestry
+      # <chr>          <chr>           <chr>             <chr>      <chr>                    <dbl>            <dbl>
+      #   1 C1000          Is a            subClassOf (NCIt) subClassOf C1504                        1                1
+      # 2 C10000         Is a            subClassOf (NCIt) subClassOf C61007                       1                1
+      # 3 C100000        Is a            subClassOf (NCIt) subClassOf C99521                       1                1
+      # 4 C100001        Is a            subClassOf (NCIt) subClassOf C99521                       1                1
+      # 5 C100002        Is a            subClassOf (NCIt) subClassOf C99521                       1                1
+      # 6 C100003        Is a            subClassOf (NCIt) subClassOf C80449                       1                1
+      # 7 C100004        Is a            subClassOf (NCIt) subClassOf C80430                       1                1
+      # 8 C100005        Is a            subClassOf (NCIt) subClassOf C15839                       1                1
+      # 9 C100006        Is a            subClassOf (NCIt) subClassOf C139982                      1                1
+      # 10 C100007        Is a            subClassOf (NCIt) subClassOf C99896                       1                1
+      # # … with 190,394 more rows
 
       classification_b <-
         edge %>%
@@ -170,6 +224,21 @@ process_owl_to_omop <-
           is_hierarchical = 1,
           defines_ancestry = 1
         )
+      # > classification_b
+      # # A tibble: 190,404 × 7
+      # concept_code_1 relationship_id relationship_name rel_type   concept_code_2 is_hierarchical defines_ancestry
+      # <chr>          <chr>           <chr>             <chr>      <chr>                    <dbl>            <dbl>
+      #   1 C1504          Subsumes        Subsumes (CAI)    subClassOf C1000                        1                1
+      # 2 C61007         Subsumes        Subsumes (CAI)    subClassOf C10000                       1                1
+      # 3 C99521         Subsumes        Subsumes (CAI)    subClassOf C100000                      1                1
+      # 4 C99521         Subsumes        Subsumes (CAI)    subClassOf C100001                      1                1
+      # 5 C99521         Subsumes        Subsumes (CAI)    subClassOf C100002                      1                1
+      # 6 C80449         Subsumes        Subsumes (CAI)    subClassOf C100003                      1                1
+      # 7 C80430         Subsumes        Subsumes (CAI)    subClassOf C100004                      1                1
+      # 8 C15839         Subsumes        Subsumes (CAI)    subClassOf C100005                      1                1
+      # 9 C139982        Subsumes        Subsumes (CAI)    subClassOf C100006                      1                1
+      # 10 C99896         Subsumes        Subsumes (CAI)    subClassOf C100007                      1                1
+      # # … with 190,394 more rows
 
       relationships <-
         edge %>%
@@ -186,6 +255,21 @@ process_owl_to_omop <-
           is_hierarchical = 0,
           defines_ancestry = 0
         )
+      # > relationships
+      # # A tibble: 914,350 × 7
+      # concept_code_1 relationship_id                    relationship_name                  rel_type                           concept_code_2 is_hierarchical defines_ancestry
+      # <chr>          <chr>                              <chr>                              <chr>                              <chr>                    <dbl>            <dbl>
+      #   1 C1000          Concept_In_Subset                  Concept_In_Subset                  Concept_In_Subset                  C63923                       0                0
+      # 2 C10000         Chemotherapy_Regimen_Has_Component Chemotherapy_Regimen_Has_Component Chemotherapy_Regimen_Has_Component C405                         0                0
+      # 3 C10000         Chemotherapy_Regimen_Has_Component Chemotherapy_Regimen_Has_Component Chemotherapy_Regimen_Has_Component C507                         0                0
+      # 4 C10000         Chemotherapy_Regimen_Has_Component Chemotherapy_Regimen_Has_Component Chemotherapy_Regimen_Has_Component C662                         0                0
+      # 5 C10000         Chemotherapy_Regimen_Has_Component Chemotherapy_Regimen_Has_Component Chemotherapy_Regimen_Has_Component C770                         0                0
+      # 6 C10000         Chemotherapy_Regimen_Has_Component Chemotherapy_Regimen_Has_Component Chemotherapy_Regimen_Has_Component C855                         0                0
+      # 7 C100000        Procedure_Has_Target_Anatomy       Procedure_Has_Target_Anatomy       Procedure_Has_Target_Anatomy       C12686                       0                0
+      # 8 C100000        Concept_In_Subset                  Concept_In_Subset                  Concept_In_Subset                  C101859                      0                0
+      # 9 C100000        Concept_In_Subset                  Concept_In_Subset                  Concept_In_Subset                  C61410                       0                0
+      # 10 C100000        Concept_In_Subset                  Concept_In_Subset                  Concept_In_Subset                  C66830                       0                0
+      # # … with 914,340 more rows
 
       concept_relationship_stage <-
         dplyr::bind_rows(
@@ -210,6 +294,21 @@ process_owl_to_omop <-
           by = "concept_code_2"
         ) %>%
         dplyr::distinct()
+      # > concept_relationship_stage
+      # # A tibble: 1,295,158 × 9
+      # concept_code_1 relationship_id relationship_name rel_type   concept_code_2 is_hierarchical defines_ancestry concept_name_1                                                 concept_name_2
+      # <chr>          <chr>           <chr>             <chr>      <chr>                    <dbl>            <dbl> <chr>                                                          <chr>
+      #   1 C1000          Is a            subClassOf (NCIt) subClassOf C1504                        1                1 Recombinant Amphiregulin                                       Recombinant E…
+      # 2 C10000         Is a            subClassOf (NCIt) subClassOf C61007                       1                1 Cyclophosphamide/Fluoxymesterone/Mitolactol/Prednisone/Tamoxi… Agent Combina…
+      # 3 C100000        Is a            subClassOf (NCIt) subClassOf C99521                       1                1 Percutaneous Coronary Intervention for ST Elevation Myocardia… Percutaneous …
+      # 4 C100001        Is a            subClassOf (NCIt) subClassOf C99521                       1                1 Percutaneous Coronary Intervention for ST Elevation Myocardia… Percutaneous …
+      # 5 C100002        Is a            subClassOf (NCIt) subClassOf C99521                       1                1 Percutaneous Coronary Intervention for ST Elevation Myocardia… Percutaneous …
+      # 6 C100003        Is a            subClassOf (NCIt) subClassOf C80449                       1                1 Percutaneous Mitral Valve Repair                               Mitral Valve …
+      # 7 C100004        Is a            subClassOf (NCIt) subClassOf C80430                       1                1 Pericardial Stripping                                          Cardiac Thera…
+      # 8 C100005        Is a            subClassOf (NCIt) subClassOf C15839                       1                1 Post-Cardiac Transplant Evaluation                             Prevention an…
+      # 9 C100006        Is a            subClassOf (NCIt) subClassOf C139982                      1                1 Pre-Operative Evaluation for Non-Cardiovascular Surgery        Pre-operative…
+      # 10 C100007        Is a            subClassOf (NCIt) subClassOf C99896                       1                1 Previously Implanted Cardiac Lead                              Cardiac Lead …
+      # # … with 1,295,148 more rows
 
 
 
@@ -223,6 +322,7 @@ process_owl_to_omop <-
         dplyr::distinct(concept_code_2) %>%
         unlist() %>%
         unname()
+      # [1] "C20189" "C20181" "C20047" "C22188" "C26548" "C12913" "C12219" "C22187" "C14250" "C1908"  "C43431" "C17828" "C97325" "C20633" "C16612" "C3910"  "C7057"  "C12218"
 
       leaf_concept_codes <-
         classification %>%
@@ -230,7 +330,7 @@ process_owl_to_omop <-
         dplyr::distinct(concept_code_1) %>%
         unlist() %>%
         unname()
-
+      # [1] "C1000"   "C10000"  "C100000" "C100001" "C100002" "C100003" [ reached getOption("max.print") -- omitted 135203 entries ]
 
       pre_domain_map <-
         concept_relationship_stage %>%
@@ -248,27 +348,41 @@ process_owl_to_omop <-
               TRUE ~ "SubClass"
             )
         ) %>%
-        dplyr::left_join(manual_domain_map, by = "rel_type")
+        dplyr::distinct()
+      # > pre_domain_map
+      # # A tibble: 1,295,158 × 11
+      # concept_code_1 relationship_id relationship_name rel_type   concept_code_2 is_hierarchical defines_ancestry concept_name_1               concept_name_2 concept_class_i… concept_class_i…
+      # <chr>          <chr>           <chr>             <chr>      <chr>                    <dbl>            <dbl> <chr>                        <chr>          <chr>            <chr>
+      #   1 C1000          Is a            subClassOf (NCIt) subClassOf C1504                        1                1 Recombinant Amphiregulin     Recombinant E… Leaf             SubClass
+      # 2 C10000         Is a            subClassOf (NCIt) subClassOf C61007                       1                1 Cyclophosphamide/Fluoxymest… Agent Combina… Leaf             SubClass
+      # 3 C100000        Is a            subClassOf (NCIt) subClassOf C99521                       1                1 Percutaneous Coronary Inter… Percutaneous … Leaf             SubClass
+      # 4 C100001        Is a            subClassOf (NCIt) subClassOf C99521                       1                1 Percutaneous Coronary Inter… Percutaneous … Leaf             SubClass
+      # 5 C100002        Is a            subClassOf (NCIt) subClassOf C99521                       1                1 Percutaneous Coronary Inter… Percutaneous … Leaf             SubClass
+      # 6 C100003        Is a            subClassOf (NCIt) subClassOf C80449                       1                1 Percutaneous Mitral Valve R… Mitral Valve … Leaf             SubClass
+      # 7 C100004        Is a            subClassOf (NCIt) subClassOf C80430                       1                1 Pericardial Stripping        Cardiac Thera… Leaf             SubClass
+      # 8 C100005        Is a            subClassOf (NCIt) subClassOf C15839                       1                1 Post-Cardiac Transplant Eva… Prevention an… Leaf             SubClass
+      # 9 C100006        Is a            subClassOf (NCIt) subClassOf C139982                      1                1 Pre-Operative Evaluation fo… Pre-operative… Leaf             SubClass
+      # 10 C100007        Is a            subClassOf (NCIt) subClassOf C99896                       1                1 Previously Implanted Cardia… Cardiac Lead … Leaf             SubClass
+      # # … with 1,295,148 more rows
 
 
       concepts_staged <-
         dplyr::bind_rows(
           pre_domain_map %>%
-            dplyr::select(
+            dplyr::transmute(
               concept_code = concept_code_1,
               concept_name = concept_name_1,
               concept_class_id = concept_class_id_1,
-              domain_id = domain_id_1
+              domain_id = "Observation"
             ),
           pre_domain_map %>%
-            dplyr::select(
+            dplyr::transmute(
               concept_code = concept_code_2,
               concept_name = concept_name_2,
               concept_class_id = concept_class_id_2,
-              domain_id = domain_id_2
+              domain_id = "Observation"
             )
         ) %>%
-        dplyr::mutate(domain_id = "Observation") %>%
         dplyr::distinct() %>%
         dplyr::left_join(
           tibble::tribble(
@@ -315,6 +429,21 @@ process_owl_to_omop <-
           "invalid_reason"
         ))) %>%
         dplyr::distinct()
+      # > concepts_staged
+      # # A tibble: 166,403 × 9
+      # concept_name                                                        domain_id vocabulary_id concept_class_id standard_concept concept_code valid_start_date valid_end_date invalid_reason
+      # <chr>                                                               <chr>     <chr>         <chr>            <chr>            <chr>        <chr>            <chr>          <chr>
+      #   1 Recombinant Amphiregulin                                            Observat… CAI NCIt      Leaf             NA               C1000        1970-01-01       2099-12-31     NA
+      # 2 Cyclophosphamide/Fluoxymesterone/Mitolactol/Prednisone/Tamoxifen    Observat… CAI NCIt      Leaf             NA               C10000       1970-01-01       1970-01-01     D
+      # 3 Percutaneous Coronary Intervention for ST Elevation Myocardial Inf… Observat… CAI NCIt      Leaf             NA               C100000      1970-01-01       2099-12-31     NA
+      # 4 Percutaneous Coronary Intervention for ST Elevation Myocardial Inf… Observat… CAI NCIt      Leaf             NA               C100001      1970-01-01       2099-12-31     NA
+      # 5 Percutaneous Coronary Intervention for ST Elevation Myocardial Inf… Observat… CAI NCIt      Leaf             NA               C100002      1970-01-01       2099-12-31     NA
+      # 6 Percutaneous Mitral Valve Repair                                    Observat… CAI NCIt      Leaf             NA               C100003      1970-01-01       2099-12-31     NA
+      # 7 Pericardial Stripping                                               Observat… CAI NCIt      Leaf             NA               C100004      1970-01-01       2099-12-31     NA
+      # 8 Post-Cardiac Transplant Evaluation                                  Observat… CAI NCIt      Leaf             NA               C100005      1970-01-01       2099-12-31     NA
+      # 9 Pre-Operative Evaluation for Non-Cardiovascular Surgery             Observat… CAI NCIt      Leaf             NA               C100006      1970-01-01       2099-12-31     NA
+      # 10 Previously Implanted Cardiac Lead                                   Observat… CAI NCIt      Leaf             NA               C100007      1970-01-01       2099-12-31     NA
+      # # … with 166,393 more rows
 
       concept_relationship_stage2 <-
         concept_relationship_stage %>%
@@ -337,33 +466,158 @@ process_owl_to_omop <-
             "invalid_reason"
           )
         ))
+      # > concept_relationship_stage2
+      # # A tibble: 1,295,158 × 6
+      # concept_code_1 concept_code_2 relationship_id valid_start_date valid_end_date invalid_reason
+      # <chr>          <chr>          <chr>           <chr>            <chr>          <chr>
+      #   1 C1000          C1504          Is a            1970-01-01       2099-12-31     NA
+      # 2 C10000         C61007         Is a            1970-01-01       2099-12-31     NA
+      # 3 C100000        C99521         Is a            1970-01-01       2099-12-31     NA
+      # 4 C100001        C99521         Is a            1970-01-01       2099-12-31     NA
+      # 5 C100002        C99521         Is a            1970-01-01       2099-12-31     NA
+      # 6 C100003        C80449         Is a            1970-01-01       2099-12-31     NA
+      # 7 C100004        C80430         Is a            1970-01-01       2099-12-31     NA
+      # 8 C100005        C15839         Is a            1970-01-01       2099-12-31     NA
+      # 9 C100006        C139982        Is a            1970-01-01       2099-12-31     NA
+      # 10 C100007        C99896         Is a            1970-01-01       2099-12-31     NA
+      # # … with 1,295,148 more rows
 
+      # Reading max concept ids from log.json
+      current_log <-
+      jsonlite::read_json(
+        path = "inst/data/omop/current/log.json",
+        simplifyVector = TRUE
+      )
+      # Reading prior relationship file
+      current_relationship <-
+        readr::read_csv(
+          file = "inst/data/omop/current/RELATIONSHIP.csv",
+          col_types = readr::cols(.default = "c"))
+      # > current_relationship
+      # # A tibble: 134 × 6
+      # relationship_id                      relationship_name                    is_hierarchical defines_ancestry reverse_relationship_id relationship_concept_id
+      # <chr>                                <chr>                                <chr>           <chr>            <chr>                   <chr>
+      #   1 Is a                                 subClassOf (NCIt)                    1               1                NA                      7001000001
+      # 2 Subsumes                             Subsumes (CAI)                       1               1                NA                      7001000002
+      # 3 Concept_In_Subset                    Concept_In_Subset                    0               0                NA                      7001000003
+      # 4 Chemotherapy_Regimen_Has_Component   Chemotherapy_Regimen_Has_Component   0               0                NA                      7001000004
+      # 5 Procedure_Has_Target_Anatomy         Procedure_Has_Target_Anatomy         0               0                NA                      7001000005
+      # 6 Disease_Has_Associated_Anatomic_Site Disease_Has_Associated_Anatomic_Site 0               0                NA                      7001000006
+      # 7 Disease_Has_Associated_Disease       Disease_Has_Associated_Disease       0               0                NA                      7001000007
+      # 8 Disease_Has_Primary_Anatomic_Site    Disease_Has_Primary_Anatomic_Site    0               0                NA                      7001000008
+      # 9 Disease_Has_Normal_Tissue_Origin     Disease_Has_Normal_Tissue_Origin     0               0                NA                      7001000009
+      # 10 Disease_Has_Normal_Cell_Origin       Disease_Has_Normal_Cell_Origin       0               0                NA                      7001000010
+      # # … with 124 more rows
+
+      # Table is slimmed down for upcoming join
+      # with newest relationships
+      current_relationship <-
+        current_relationship %>%
+        dplyr::distinct(relationship_id, relationship_name, relationship_concept_id)
+      # > current_relationship
+      # # A tibble: 134 × 3
+      # relationship_id                      relationship_name                    relationship_concept_id
+      # <chr>                                <chr>                                <chr>
+      #   1 Is a                                 subClassOf (NCIt)                    7001000001
+      # 2 Subsumes                             Subsumes (CAI)                       7001000002
+      # 3 Concept_In_Subset                    Concept_In_Subset                    7001000003
+      # 4 Chemotherapy_Regimen_Has_Component   Chemotherapy_Regimen_Has_Component   7001000004
+      # 5 Procedure_Has_Target_Anatomy         Procedure_Has_Target_Anatomy         7001000005
+      # 6 Disease_Has_Associated_Anatomic_Site Disease_Has_Associated_Anatomic_Site 7001000006
+      # 7 Disease_Has_Associated_Disease       Disease_Has_Associated_Disease       7001000007
+      # 8 Disease_Has_Primary_Anatomic_Site    Disease_Has_Primary_Anatomic_Site    7001000008
+      # 9 Disease_Has_Normal_Tissue_Origin     Disease_Has_Normal_Tissue_Origin     7001000009
+      # 10 Disease_Has_Normal_Cell_Origin       Disease_Has_Normal_Cell_Origin       7001000010
+      # # … with 124 more rows
+
+      # Current relationship rows are
+      # isolated in OMOP format to be compared to
+      # prior relationship file. Any diffs are
+      # assigned a new concept id
       relationship_stage <-
-        concept_relationship_stage %>%
+        concept_relationship_stage %>% # concept_relationship_stage2 isn't used because it is missing `relationship_name` field
         dplyr::transmute(
           relationship_id,
           relationship_name,
           is_hierarchical,
-          defines_ancestry,
-          reverse_relationship_id = NA_character_,
-          relationship_concept_id = NA_integer_
+          defines_ancestry
         ) %>%
-        dplyr::select(
-          dplyr::all_of(
-            c(
-              "relationship_id",
-              "relationship_name",
-              "is_hierarchical",
-              "defines_ancestry",
-              "reverse_relationship_id",
-              "relationship_concept_id"
-            )
-          )
-        ) %>%
-        dplyr::distinct() %>%
-        tibble::rowid_to_column("rowid") %>%
-        dplyr::mutate(relationship_concept_id = 7001000000 + rowid) %>%
-        dplyr::select(-rowid)
+        dplyr::distinct()
+
+      # Assigning new concept ids to new
+      # relationships while retaining the old ones
+      # from prior versions
+      relationship_stage2 <-
+      relationship_stage %>%
+        dplyr::left_join(current_relationship,
+                         by = c("relationship_id",
+                                "relationship_name"))
+      # > relationship_stage2
+      # # A tibble: 134 × 5
+      # relationship_id                      relationship_name                    is_hierarchical defines_ancestry relationship_concept_id
+      # <chr>                                <chr>                                          <dbl>            <dbl> <chr>
+      #   1 Is a                                 subClassOf (NCIt)                                  1                1 7001000001
+      # 2 Subsumes                             Subsumes (CAI)                                     1                1 7001000002
+      # 3 Concept_In_Subset                    Concept_In_Subset                                  0                0 7001000003
+      # 4 Chemotherapy_Regimen_Has_Component   Chemotherapy_Regimen_Has_Component                 0                0 7001000004
+      # 5 Procedure_Has_Target_Anatomy         Procedure_Has_Target_Anatomy                       0                0 7001000005
+      # 6 Disease_Has_Associated_Anatomic_Site Disease_Has_Associated_Anatomic_Site               0                0 7001000006
+      # 7 Disease_Has_Associated_Disease       Disease_Has_Associated_Disease                     0                0 7001000007
+      # 8 Disease_Has_Primary_Anatomic_Site    Disease_Has_Primary_Anatomic_Site                  0                0 7001000008
+      # 9 Disease_Has_Normal_Tissue_Origin     Disease_Has_Normal_Tissue_Origin                   0                0 7001000009
+      # 10 Disease_Has_Normal_Cell_Origin       Disease_Has_Normal_Cell_Origin                     0                0 7001000010
+      # # … with 124 more rows
+
+      # If there are any new relationships in the newest version of NCIt,
+      # a new concept id is assigned.
+      # The last relationship_id is taken from the log and converted to
+      # double to be able to treated as a numeric. Integer cannot be
+      # used because the value is too large to be treated as one.
+
+      last_relationship_id <- as.double(current_log$relationship_concept_id)
+      # > last_relationship_id
+      # [1] 7.001e+09
+
+      # Any new relationships are subset
+      # and if there are any rows, new relationship_concept_id
+      # is generated for each
+      relationship_stage3a <-
+        relationship_stage2 %>%
+        dplyr::filter(is.na(relationship_concept_id))
+
+      if (nrow(relationship_stage3a)>0) {
+
+        cli::cli_inform("New relationships found:")
+        huxtable::print_screen(
+        huxtable::hux(relationship_stage3a)
+        )
+
+        relationship_stage3a <-
+          relationship_stage3a %>%
+          dplyr::distinct() %>%
+          tibble::rowid_to_column("rowid") %>%
+          dplyr::mutate(relationship_concept_id =
+                          last_relationship_id+rowid) %>%
+          dplyr::select(-rowid) %>%
+          dplyr::distinct()
+
+
+      } else {
+
+        cli::cli_inform("No new relationships found in version {nci_version} compared to prior version {current_log$nci_version}.")
+
+      }
+
+      relationship_stage3b <-
+        relationship_stage2 %>%
+        dplyr::filter(!is.na(relationship_concept_id))
+
+
+      relationship_stage4 <-
+        dplyr::bind_rows(
+          relationship_stage3a,
+          relationship_stage3b
+        )
 
 
       make_concept_id <-
@@ -774,7 +1028,7 @@ process_owl_to_omop <-
           CONCEPT_ANCESTOR = concept_ancestor_stage2,
           CONCEPT_RELATIONSHIP = concept_relationship_stage3,
           VOCABULARY = vocabulary_stage,
-          RELATIONSHIP = relationship_stage,
+          RELATIONSHIP = relationship_stage4,
           CONCEPT_CLASS = concept_class_stage
         ) %>%
         map(dplyr::distinct)
@@ -793,7 +1047,7 @@ process_owl_to_omop <-
         list(
           nci_version = nci_version,
           concept_id  = as.character(max(concepts_staged2$concept_id)),
-          relationship_concept_id = as.character(max(relationship_stage$relationship_concept_id))
+          relationship_concept_id = as.character(max(as.double(relationship_stage4$relationship_concept_id)))
         )
       max_concept_id_log <- jsonlite::toJSON(max_concept_ids)
       cat(
