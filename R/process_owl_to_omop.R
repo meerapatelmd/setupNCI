@@ -798,7 +798,7 @@ process_owl_to_omop <-
       max_concept_id_log <- jsonlite::toJSON(max_concept_ids)
       cat(
         max_concept_id_log,
-        file = "inst/data/omop/current/log.json",
+        file = file.path("inst", "data", "omop", nci_version, "log.json"),
         append = FALSE,
         sep = "\n"
       )
