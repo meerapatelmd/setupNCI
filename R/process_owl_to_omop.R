@@ -93,8 +93,10 @@ process_owl_to_omop <-
 
     if (any(!file.exists(final_paths))) {
 
-      # Metadata Tables VOCABULARY and CONCEPT_CLASS require
-      # no processing and are giving 7000000000 (7-billion prefix)
+      # Metadata Tables VOCABULARY requires
+      # no processing and is given 7000000000 (7-billion prefix)
+      # Other metadata tables with 7000000000: CONCEPT_CLASS (produced from
+      # final CONCEPTS table)
       vocabulary_stage <-
         tibble(
           vocabulary_id,
@@ -103,15 +105,6 @@ process_owl_to_omop <-
           vocabulary_version,
           vocabulary_concept_id = 7000000001
         )
-
-
-      concept_class_stage <-
-        concepts_staged %>%
-        dplyr::transmute(concept_class_id,
-                         concept_class_name = concept_class_id,
-                         concept_class_concept_id = 7000000002
-        ) %>%
-        dplyr::distinct()
 
 
 
@@ -763,7 +756,16 @@ process_owl_to_omop <-
         arrange(concept_id)
 
 
-
+      concept_class_stage <-
+        concepts_staged2 %>%
+        dplyr::transmute(concept_class_id,
+                         concept_class_name = concept_class_id,
+                         concept_class_concept_id = NA_integer_
+        ) %>%
+        dplyr::distinct() %>%
+        tibble::rowid_to_column("rowid") %>%
+        dplyr::mutate(concept_class_concept_id = 7000000001 + rowid) %>%
+        dplyr::select(-rowid)
 
       output_map <-
         list(
