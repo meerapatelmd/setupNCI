@@ -791,15 +791,28 @@ process_owl_to_omop <-
 
       max_concept_ids <-
         list(
-          concept_id = max(concepts_staged2$concept_id),
-          relationship_concept_id = max(relationship_stage$relationship_concept_id)
+          nci_version = nci_version,
+          concept_id  = as.character(max(concepts_staged2$concept_id)),
+          relationship_concept_id = as.character(max(relationship_stage$relationship_concept_id))
         )
       max_concept_id_log <- jsonlite::toJSON(max_concept_ids)
       cat(
         max_concept_id_log,
-        file = "inst/data/omop/id_log.json",
+        file = "inst/data/omop/current/log.json",
         append = FALSE,
         sep = "\n"
+      )
+
+      system(
+        command =
+          glue::glue(
+            "
+            rm -rf inst/data/omop/prior
+            cp -rf inst/data/omop/current inst/data/omop/prior
+            rm -rf inst/data/omop/current
+            cp -rf inst/data/omop/{nci_version} inst/data/omop/current
+            "
+          )
       )
 
       cli::cli_inform("{cli::symbol$tick} OMOP Tables available at '{omop_folder}'")
