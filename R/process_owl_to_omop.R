@@ -488,11 +488,30 @@ process_owl_to_omop <-
         path = "inst/data/omop/current/log.json",
         simplifyVector = TRUE
       )
+
+      # current_log <-
+      #   list(
+      #     nci_version = "NA",
+      #     concept_id = "7000000000",
+      #     relationship_concept_id = "7001000000"
+      #   )
+
       # Reading prior relationship file
       current_relationship <-
         readr::read_csv(
           file = "inst/data/omop/current/RELATIONSHIP.csv",
           col_types = readr::cols(.default = "c"))
+
+      # current_relationship <-
+      #   tribble(
+      #     ~relationship_id,
+      #     ~relationship_name,
+      #     ~is_hierarchical,
+      #     ~defines_ancestry,
+      #     ~reverse_relationship_id,
+      #     ~relationship_concept_id
+      #   )
+
       # > current_relationship
       # # A tibble: 134 × 6
       # relationship_id                      relationship_name                    is_hierarchical defines_ancestry reverse_relationship_id relationship_concept_id
@@ -587,9 +606,11 @@ process_owl_to_omop <-
 
       if (nrow(relationship_stage3a)>0) {
 
-        cli::cli_inform("New relationships found:")
+        cli::cli_inform("{nrow(relationship_stage3a)} new relationship{?s} found:")
         huxtable::print_screen(
-        huxtable::hux(relationship_stage3a)
+        huxtable::hux(relationship_stage3a) %>%
+          huxtable::theme_article(),
+        colnames = FALSE
         )
 
         relationship_stage3a <-
@@ -600,6 +621,8 @@ process_owl_to_omop <-
                           last_relationship_id+rowid) %>%
           dplyr::select(-rowid) %>%
           dplyr::distinct()
+
+        cli::cli_inform("{.var relationship_concept_id} {min(relationship_stage3a$relationship_concept_id)} to {max(relationship_stage3a$relationship_concept_id)} assigned.")
 
 
       } else {
