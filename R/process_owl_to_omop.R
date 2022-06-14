@@ -789,6 +789,19 @@ process_owl_to_omop <-
         )
       }
 
+      max_concept_ids <-
+        list(
+          concept_id = max(concepts_staged2$concept_id),
+          relationship_concept_id = max(relationship_stage$relationship_concept_id)
+        )
+      max_concept_id_log <- jsonlite::toJSON(max_concept_ids)
+      cat(
+        max_concept_id_log,
+        file = "inst/data/omop/id_log.json",
+        append = FALSE,
+        sep = "\n"
+      )
+
       cli::cli_inform("{cli::symbol$tick} OMOP Tables available at '{omop_folder}'")
 
       print(
