@@ -656,12 +656,6 @@ process_owl_to_omop <-
         )
 
 
-      # Function that creates new concept_ids
-      make_concept_id <-
-        function(x) {
-          as.character(as.double(current_log$concept_id) + 1:length(x))
-        }
-
       # Getting existing concept_ids
       current_file <-
         "inst/data/omop/current/CONCEPT.csv"
@@ -735,7 +729,7 @@ process_owl_to_omop <-
         concepts_staged2a <-
           concepts_staged2a %>%
           dplyr::mutate(concept_id =
-                          make_concept_id(concept_id),
+                          as.character(70000000000+as.double(stringr::str_remove_all(concept_code, pattern = "^C"))),
                         valid_start_date = as.character(Sys.Date()))
 
         cli::cli_inform("{nrow(concepts_staged2a)} new concept{?s} found. Update sample:")
@@ -1181,7 +1175,6 @@ process_owl_to_omop <-
       max_concept_ids <-
         list(
           nci_version = nci_version,
-          concept_id  = as.character(max(concepts_staged3$concept_id)),
           relationship_concept_id = as.character(max(as.double(relationship_stage4$relationship_concept_id)))
         )
       max_concept_id_log <- jsonlite::toJSON(max_concept_ids)
