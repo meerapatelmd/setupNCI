@@ -483,34 +483,47 @@ process_owl_to_omop <-
       # # … with 1,295,148 more rows
 
       # Reading max concept ids from log.json
-      current_log <-
-      jsonlite::read_json(
-        path = "inst/data/omop/current/log.json",
-        simplifyVector = TRUE
-      )
+      current_file <-
+        "inst/data/omop/current/log.json"
 
-      # current_log <-
-      #   list(
-      #     nci_version = "NA",
-      #     concept_id = "7000000000",
-      #     relationship_concept_id = "7001000000"
-      #   )
+      if (file.exists(current_file)) {
+        current_log <-
+        jsonlite::read_json(
+          path = current_file,
+          simplifyVector = TRUE
+        )
+
+      } else {
+
+      current_log <-
+        list(
+          nci_version = "NA",
+          concept_id = "7000000000",
+          relationship_concept_id = "7001000000"
+        )
+      }
 
       # Reading prior relationship file
+      current_file <-
+        "inst/data/omop/current/RELATIONSHIP.csv"
+
+      if (file.exists(current_file)) {
       current_relationship <-
         readr::read_csv(
-          file = "inst/data/omop/current/RELATIONSHIP.csv",
+          file = current_file,
           col_types = readr::cols(.default = "c"))
+      } else {
 
-      # current_relationship <-
-      #   tribble(
-      #     ~relationship_id,
-      #     ~relationship_name,
-      #     ~is_hierarchical,
-      #     ~defines_ancestry,
-      #     ~reverse_relationship_id,
-      #     ~relationship_concept_id
-      #   )
+      current_relationship <-
+        tribble(
+          ~relationship_id,
+          ~relationship_name,
+          ~is_hierarchical,
+          ~defines_ancestry,
+          ~reverse_relationship_id,
+          ~relationship_concept_id
+        )
+      }
 
       # > current_relationship
       # # A tibble: 134 × 6
@@ -618,7 +631,7 @@ process_owl_to_omop <-
           dplyr::distinct() %>%
           tibble::rowid_to_column("rowid") %>%
           dplyr::mutate(relationship_concept_id =
-                          last_relationship_id+rowid) %>%
+                          as.character(last_relationship_id+rowid)) %>%
           dplyr::select(-rowid) %>%
           dplyr::distinct()
 
@@ -643,29 +656,124 @@ process_owl_to_omop <-
         )
 
 
+      # Function that creates new concept_ids
       make_concept_id <-
         function(x) {
-          7002000000 + 1:length(x)
+          as.character(as.double(current_log$concept_id) + 1:length(x))
         }
 
-      concepts_staged2 <-
-        concepts_staged %>%
-        dplyr::mutate(
-          concept_id =
-            make_concept_id(concept_code)
-        ) %>%
-        dplyr::select(
+      # Getting existing concept_ids
+      current_file <-
+        "inst/data/omop/current/CONCEPT.csv"
+
+      if (file.exists(current_file)) {
+      current_concept <-
+        readr::read_csv(
+          file = current_file,
+          col_types = readr::cols(.default = "c")) %>%
+        dplyr::distinct(concept_code,
+                        concept_id,
+                        valid_start_date,
+                        valid_end_date,
+                        invalid_reason)
+
+      } else {
+
+      current_concept <-
+        tribble(~concept_code, ~concept_id, ~valid_start_date, ~valid_end_date, ~invalid_reason)
+
+      }
+
+      # Joining to previous CONCEPT by code to determine
+      # new concept_id assignment
+      concepts_staged1 <-
+      concepts_staged %>%
+        dplyr::left_join(current_concept,
+                         by =  c("concept_code"),
+                         suffix = c(".new", ".current")) %>%
+        # If a previously valid concept has been deprecated, the
+        # `valid_end_date` is updated to current date
+        dplyr::transmute(
           concept_id,
-          dplyr::everything()
+          concept_name,
+          domain_id,
+          vocabulary_id,
+          concept_class_id,
+          standard_concept,
+          concept_code,
+          valid_start_date = dplyr::coalesce(valid_start_date.current, valid_start_date.new),
+          valid_end_date_update = ifelse(invalid_reason.new == 'D' & is.na(invalid_reason.current), as.character(Sys.Date()), NA_character_),
+          valid_end_date.new,
+          valid_end_date.current,
+          invalid_reason = invalid_reason.new) %>%
+        dplyr::transmute(
+          concept_id,
+          concept_name,
+          domain_id,
+          vocabulary_id,
+          concept_class_id,
+          standard_concept,
+          concept_code,
+          valid_start_date,
+          valid_end_date = dplyr::coalesce(valid_end_date_update, valid_end_date.new, valid_end_date.current),
+          invalid_reason) %>%
+        dplyr::distinct()
+
+      concepts_staged2a <-
+        concepts_staged1 %>%
+        dplyr::filter(is.na(concept_id))
+
+      if (nrow(concepts_staged2a)>0) {
+
+        cli::cli_inform("{nrow(concepts_staged2a)} new concept{?s} found. Sample:")
+        huxtable::print_screen(
+          huxtable::hux(head(concepts_staged2a)) %>%
+            huxtable::theme_article(),
+          colnames = FALSE
         )
+
+        concepts_staged2a <-
+          concepts_staged2a %>%
+          dplyr::mutate(concept_id =
+                          make_concept_id(concept_id),
+                        valid_start_date = as.character(Sys.Date()))
+
+        cli::cli_inform("{nrow(concepts_staged2a)} new concept{?s} found. Update sample:")
+        huxtable::print_screen(
+          huxtable::hux(head(concepts_staged2a)) %>%
+            huxtable::theme_article(),
+          colnames = FALSE
+        )
+
+
+
+        cli::cli_inform("{.var concept_id} {min(concepts_staged2a$concept_id)} to {max(concepts_staged2a$concept_id)} assigned.")
+
+
+      } else {
+
+        cli::cli_inform("No new concepts found in version {nci_version} compared to prior version {current_log$nci_version}.")
+
+
+      }
+
+      concepts_staged2b <-
+        concepts_staged1 %>%
+        dplyr::filter(!is.na(concept_id))
+
+      concepts_staged3 <-
+        dplyr::bind_rows(
+          concepts_staged2a,
+          concepts_staged2b) %>%
+        dplyr::distinct()
 
       concept_relationship_stage3 <-
         concept_relationship_stage2 %>%
-        dplyr::left_join(concepts_staged2 %>%
+        dplyr::left_join(concepts_staged3 %>%
           dplyr::rename_all(function(x) sprintf("%s_1", x)),
         by = c("concept_code_1")
         ) %>%
-        dplyr::left_join(concepts_staged2 %>%
+        dplyr::left_join(concepts_staged3 %>%
           dplyr::rename_all(function(x) sprintf("%s_2", x)),
         by = c("concept_code_2")
         ) %>%
@@ -679,10 +787,14 @@ process_owl_to_omop <-
             "invalid_reason"
           )
         )) %>%
+        dplyr::mutate(valid_start_date =
+                        ifelse(relationship_id %in% relationship_stage3a$relationship_id,
+                               as.character(Sys.Date()),
+                               valid_start_date)) %>%
         dplyr::distinct()
 
       roots <-
-        concepts_staged2 %>%
+        concepts_staged3 %>%
         dplyr::filter(concept_class_id == "Root") %>%
         dplyr::select(concept_id) %>%
         unlist() %>%
@@ -693,7 +805,7 @@ process_owl_to_omop <-
           mode = "list",
           length = length(roots)
         ) %>%
-        set_names(concepts_staged2 %>%
+        set_names(concepts_staged3 %>%
           dplyr::filter(concept_class_id == "Root") %>%
           dplyr::select(concept_name) %>%
           unlist() %>%
@@ -1005,7 +1117,7 @@ process_owl_to_omop <-
 
       concept_synonym_stage2 <-
         concept_synonym_stage %>%
-        dplyr::left_join(concepts_staged2,
+        dplyr::left_join(concepts_staged3,
           by = c("concept_code", "concept_name")
         ) %>%
         dplyr::transmute(
@@ -1016,7 +1128,7 @@ process_owl_to_omop <-
         dplyr::distinct()
 
       concept_synonym_stage2_b <-
-        concepts_staged2 %>%
+        concepts_staged3 %>%
         dplyr::transmute(
           concept_id,
           concept_synonym_name = concept_name,
@@ -1034,7 +1146,7 @@ process_owl_to_omop <-
 
 
       concept_class_stage <-
-        concepts_staged2 %>%
+        concepts_staged3 %>%
         dplyr::transmute(concept_class_id,
                          concept_class_name = concept_class_id,
                          concept_class_concept_id = NA_integer_
@@ -1046,7 +1158,7 @@ process_owl_to_omop <-
 
       output_map <-
         list(
-          CONCEPT = concepts_staged2,
+          CONCEPT = concepts_staged3,
           CONCEPT_SYNONYM = concept_synonym_stage3,
           CONCEPT_ANCESTOR = concept_ancestor_stage2,
           CONCEPT_RELATIONSHIP = concept_relationship_stage3,
@@ -1069,7 +1181,7 @@ process_owl_to_omop <-
       max_concept_ids <-
         list(
           nci_version = nci_version,
-          concept_id  = as.character(max(concepts_staged2$concept_id)),
+          concept_id  = as.character(max(concepts_staged3$concept_id)),
           relationship_concept_id = as.character(max(as.double(relationship_stage4$relationship_concept_id)))
         )
       max_concept_id_log <- jsonlite::toJSON(max_concept_ids)

@@ -28,7 +28,6 @@ setup_omop <-
            render_sql = TRUE,
            render_only = FALSE,
            checks = "",
-           nci_version,
            log_schema = "public",
            log_table = "setup_nci_omop_log") {
 
@@ -37,9 +36,19 @@ setup_omop <-
       package = "setupNCI",
       "data",
       "omop",
-      nci_version
+      "current"
     )
 
+    current_file <-
+      "inst/data/omop/current/log.json"
+
+    current_log <-
+      jsonlite::read_json(
+        path = current_file,
+        simplifyVector = TRUE
+      )
+
+    nci_version <- current_log$nci_version
     release_version <- nci_version
 
     if (missing(conn)) {
@@ -142,8 +151,7 @@ setup_omop <-
                 relationship_name			VARCHAR(255)	NOT NULL,
                 is_hierarchical			VARCHAR(1)		NOT NULL,
                 defines_ancestry			VARCHAR(1)		NOT NULL,
-                reverse_relationship_id	VARCHAR(20)	,
-                relationship_concept_id	BIGINT
+                relationship_concept_id	VARCHAR(20)
               )
               ;
               --HINT DISTRIBUTE ON RANDOM
