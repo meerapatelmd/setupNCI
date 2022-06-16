@@ -22,7 +22,7 @@
 setup_omop <-
   function(conn,
            conn_fun = "pg13::local_connect()",
-           target_schema = "omop_athena_nci",
+           target_schema = "omop_athena_nci_only",
            steps = c("drop_tables", "copy", "log", "indices", "constraints"),
            verbose = TRUE,
            render_sql = TRUE,
