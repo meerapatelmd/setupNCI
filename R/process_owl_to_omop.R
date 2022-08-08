@@ -402,15 +402,17 @@ process_owl_to_omop <-
             dplyr::transmute(
               concept_code = code,
               invalid_reason =
-                ifelse(!is.na(Concept_Status),
+                ifelse(
+                  grepl(pattern = "Obsolete", Concept_Status),
                   "D",
-                  Concept_Status
+                  NA_character_
                 ),
               valid_start_date =
                 "1970-01-01",
               valid_end_date =
-                ifelse(!is.na(Concept_Status),
-                  "1970-01-01",
+                ifelse(
+                  grepl(pattern = "Obsolete", Concept_Status),
+                  valid_start_date,
                   "2099-12-31"
                 )
             ),
@@ -711,6 +713,8 @@ process_owl_to_omop <-
           valid_start_date,
           valid_end_date = dplyr::coalesce(valid_end_date_update, valid_end_date.new, valid_end_date.current),
           invalid_reason) %>%
+        dplyr::mutate(
+          valid_end_date = ifelse(valid_end_date == "1970-01-01" & valid_start_date > valid_end_date, valid_start_date, valid_end_date)) %>%
         dplyr::distinct()
 
       concepts_staged2a <-
