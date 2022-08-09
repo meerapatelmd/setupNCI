@@ -97,10 +97,25 @@ process_owl_to_neo4j <-
 
     }
 
+    ####################### README ###########################
+    # function that reads the nodes and edges csvs consistently
+    # to produce a meaningful README
+
+    read_file <-
+      function(file) {
+    readr::read_csv(file = file,
+                    show_col_types = FALSE,
+                    col_types = readr::cols(.default = "c"),
+                    na = "NA") %>% # Blank values shouldn't be interpreted as NA_character__ in order to get accurate factor counts downstream
+          dplyr::mutate_all(~tidyr::replace_na(.,"NULL")) # NA's are converted to NULLS (if they are present - likely not present)
+
+      }
+
     # Reading newest version to include as part of the commit message
     nci_version <- readLines(tmp_target_files["nci_version"])
-    node <- readr::read_csv(file = tmp_target_files["node"],
-                            show_col_types = FALSE)
+
+    # Adding summary of nodes file to README
+    node <- read_file(file = tmp_target_files["node"])
     node_rows <- nrow(node)
     node_cols <- ncol(node)
 
@@ -108,8 +123,10 @@ process_owl_to_neo4j <-
     node_list_sm <-
       node_list %>%
       purrr::map(
-        function(x) forcats::fct_count(as.character(x), sort = TRUE, prop = TRUE))
+        function(x) forcats::fct_count(x, sort = TRUE, prop = TRUE)) # Unique values per field as a list of dataframes
 
+    # Overwriting existing README file if it exists with header and some node
+    # data
     readme_file <- file.path(neo4j_folder, "README.md")
     cat(
       glue::glue(
@@ -128,6 +145,7 @@ process_owl_to_neo4j <-
         sep = "  \n",
         append = TRUE)
 
+    # Adding summary for each field in the node file
     for (i in seq_along(node_list_sm)) {
 
       cat(
@@ -144,11 +162,8 @@ process_owl_to_neo4j <-
     }
 
 
-
-
-    # Add Edge Summary to README
-    edge <- readr::read_csv(file = tmp_target_files["edge"],
-                            show_col_types = FALSE)
+    # Add Edge Summary to README like node above
+    edge <- read_file(file = tmp_target_files["edge"])
     edge_rows <- nrow(edge)
     edge_cols <- ncol(edge)
 
@@ -156,7 +171,7 @@ process_owl_to_neo4j <-
     edge_list_sm <-
       edge_list %>%
       purrr::map(
-        function(x) forcats::fct_count(as.character(x), sort = TRUE, prop = TRUE))
+        function(x) forcats::fct_count(x, sort = TRUE, prop = TRUE))
 
     cat(
       glue::glue(
@@ -188,6 +203,8 @@ process_owl_to_neo4j <-
 
     }
 
+    # Remove NCI version text file since version is now in README.md
+    file.remove(file.path(neo4j_folder, "nci_version_txt"))
 
     # Add and commit newest version to repo
     system(glue::glue("git add {neo4j_folder}"))
