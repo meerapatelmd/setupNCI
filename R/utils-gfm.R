@@ -10,6 +10,12 @@ tbl_to_gfm <-
       c(col_names_a,
         col_names_b)
 
+    # Converting all data into character to prevent
+    # conversion of values to meaningless indexes in the case of factors
+    csv_data <-
+      csv_data %>%
+      dplyr::mutate_all(as.character)
+
     for (i in 1:nrow(csv_data)) {
 
       gfm_tbl <-
