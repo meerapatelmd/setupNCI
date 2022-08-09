@@ -204,7 +204,7 @@ process_owl_to_neo4j <-
     }
 
     # Remove NCI version text file since version is now in README.md
-    file.remove(file.path(neo4j_folder, "nci_version_txt"))
+    file.remove(file.path(neo4j_folder, "nci_version.txt"))
 
     # Add and commit newest version to repo
     system(glue::glue("git add {neo4j_folder}"))
