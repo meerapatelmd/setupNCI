@@ -1,3 +1,21 @@
+# setupNCI 2.0.0.9000  
+
+
+## Technical
+
+* Optimized OWL file processing into Neo4j and OMOP style csvs (`process_*` functions:  
+
+  - Getting version directly from OWL instead of manually inputting it to 
+    prevent version error 
+  
+  - Reporting of unique values in each the nodes and edges to a 
+    README.md file  
+    
+* Installation data files are now zipped versions of the most 
+recently processed csvs with the version in the name.  
+
+    
+
 # setupNCI 1.3.0   
 
 * Added NCI Version 22.02d  
