@@ -113,7 +113,7 @@ setup_omop <-
               --HINT DISTRIBUTE ON RANDOM
               CREATE TABLE {schema}.concept_crosswalk (
                 ncit_code			VARCHAR(50)		NOT NULL ,
-                target_code   VARCHAR(50)   NULL ,
+                target_code   VARCHAR(50)   NOT NULL ,
                 target_vocabulary TEXT      NOT NULL
               )
               ;
