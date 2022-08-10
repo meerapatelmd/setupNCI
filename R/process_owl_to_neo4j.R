@@ -212,6 +212,7 @@ process_owl_to_neo4j <-
 
 
 
-    cli::cli_inform("{cli::symbol$tick} Version {nci_version} Nodes and Edges are now available at '{neo4j_folder}'")
+    cli::cli_inform("{cli::symbol$tick} Version {nci_version} Nodes and Edges are now available in the '{neo4j_folder}'.")
+    cli::cli_inform("Bump the OMOP version to {nci_version} by running {.var process_neo4j_to_omop()}.")
 
   }
