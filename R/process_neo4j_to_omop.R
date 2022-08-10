@@ -1262,7 +1262,36 @@ process_neo4j_to_omop <-
                  pattern = "csv") %>%
         purrr::map(readr::read_csv,
                    col_types = readr::cols(.default = "c")) %>%
-        dplyr::bind_rows()
+        dplyr::bind_rows() %>%
+        # some values are in pipe-separated strings
+        tidyr::separate_rows(target_code, sep = "[|]{1}") %>%
+        dplyr::filter(!is.na(target_code)) %>%
+        dplyr::distinct() %>%
+        dplyr::mutate(target_code =
+                        ifelse(target_code == 'OMIM_Number "617823"',
+                               '617823',
+                               target_code))
+
+      # qa
+      qa <-
+      concept_crosswalk %>%
+        mutate(
+          validity_check =
+            case_when(target_vocabulary == 'FDA_UNII' & grepl(pattern = "^[0-9A-Z]{1,}$", target_code) ~ TRUE,
+                      target_vocabulary == 'HGNC' & grepl(pattern = "^HGNC[:]{1}[0-9]{1,}$", target_code) ~ TRUE,
+                      target_vocabulary == 'ICDO3' & grepl(pattern = "^[0-9]{1,}[/]{1}[0-9]{1,}$|^[0-9]{1,}[-]{1}[0-9]{1,}$", target_code) ~ TRUE,
+                      target_vocabulary == 'NCIm' & grepl(pattern = "^CL[0-9]{1,}$", target_code) ~ TRUE,
+                      target_vocabulary == 'OMIM' & grepl(pattern = "^[P]{0,1}[0-9]{1,}$", target_code) ~ TRUE,
+                      target_vocabulary == 'UMLS' & grepl(pattern = "^C[0-9]{1,}$", target_code) ~ TRUE,
+                      TRUE ~ FALSE)) %>%
+        dplyr::filter(validity_check == FALSE)
+
+      if (nrow(qa)>0) {
+
+        cli::cli_warn("{nrow(qa)} invalid codes found in CONCEPT_CROSSWALK:")
+        print(qa)
+
+      }
 
       readr::write_csv(
         x = concept_crosswalk,
