@@ -31,25 +31,37 @@ setup_omop <-
            log_schema = "public",
            log_table = "setup_nci_omop_log") {
 
-    path_to_csvs <-
+
+    omop_zip_file <-
+    list.files(
     system.file(
       package = "setupNCI",
-      "data",
-      "omop",
-      "current"
+      "data"
+    ),
+    pattern = "^omop.*zip$",
+    full.names = TRUE
     )
 
-    current_file <-
-      "inst/data/omop/current/log.json"
+    tmp_dir <- tempdir()
+    on.exit(unlink(tmp_dir, recursive = TRUE))
+    unzip(omop_zip_file,
+          exdir = tmp_dir)
+    omop_csvs <-
+      list.files(tmp_dir,
+                 pattern = "csv$",
+                 full.names = TRUE,
+                 recursive = TRUE)
 
-    current_log <-
-      jsonlite::read_json(
-        path = current_file,
-        simplifyVector = TRUE
-      )
+    readme_md <-
+      list.files(tmp_dir,
+                 pattern = "README.md",
+                 full.names = TRUE,
+                 recursive = TRUE)
 
-    nci_version <- current_log$nci_version
-    release_version <- nci_version
+    nci_version <- readLines(readme_md, n = 2)[2]
+    nci_version <-
+      trimws(stringr::str_remove_all(nci_version, pattern = "Version"))
+
 
     if (missing(conn)) {
       conn <- eval(rlang::parse_expr(conn_fun))
@@ -98,6 +110,14 @@ setup_omop <-
         sql_statement =
           glue::glue(
             "
+              --HINT DISTRIBUTE ON RANDOM
+              CREATE TABLE {schema}.concept_crosswalk (
+                ncit_code			VARCHAR(50)		NOT NULL ,
+                target_code   VARCHAR(50)   NULL ,
+                target_vocabulary TEXT      NOT NULL
+              )
+              ;
+
               --HINT DISTRIBUTE ON RANDOM
               CREATE TABLE {schema}.concept (
                 concept_id			BIGINT			NOT NULL ,
@@ -203,16 +223,10 @@ setup_omop <-
       table_names <-
         xfun::sans_ext(vocabulary_files)
 
-      paths_to_csvs <-
-        path.expand(file.path(
-          path_to_csvs,
-          vocabulary_files
-        ))
-
       errors <- vector()
-      for (i in seq_along(paths_to_csvs)) {
-        vocabulary_file <- paths_to_csvs[i]
-        table_name <- table_names[i]
+      for (i in seq_along(omop_csvs)) {
+        vocabulary_file <- omop_csvs[i]
+        table_name <- xfun::sans_ext(basename(vocabulary_file))
 
 
         sql <-
@@ -446,6 +460,7 @@ setup_omop <-
                 concept integer,
                 concept_ancestor integer,
                 concept_class integer,
+                concept_crosswalk integer,
                 concept_relationship integer,
                 concept_synonym integer,
                 relationship integer,
