@@ -1,33 +1,5 @@
 #' @title
-#' Process NCI Thesaurus OWL into OMOP Tables
-#'
-#' @return
-#' CSV files
-#'
-#' @details
-#' The OWL files are first processed into the Neo4j nodes and edges csvs
-#' using the `process_owl_to_neo4j` function in this package. These csvs are then
-#' processed further into OMOP format Vocabulary table csvs: CONCEPT, CONCEPT_SYNONYM,
-#' CONCEPT_RELATIONSHIP, CONCEPT_ANCESTOR. Metadata tables VOCABULARY, RELATIONSHIP,
-#' and CONCEPT_CLASS are also created.
-#'
-#' All concept ids in the output have a pattern of 7-billion.
-#'
-#' CONCEPT:
-#' The `domain_id` is determined by the source `rel_type` value in the Edges file. The
-#' `concept_class_id` are dependant on the placement of the hierarchy. If it is
-#' the topmost ancestor, it is 'Root' Class. If it is a bottomost descendant, it is
-#' a 'Leaf' Non-Standard Concept. Otherwise the concept is a 'SubClass' Non-Standard Concept.
-#' If there is any value found within the `Concept_Status` field in the nodes csv,
-#' the concept is deprecated in the final concept table.
-#'
-#' CONCEPT_RELATIONSHIP:
-#' All relationships (asserted, inherited, and annotation) are used to generate these csvs.
-#' The exact `rel_type` from the source edge csv is lost in this processing.
-#'
-#' CONCEPT_SYNONYM: All language concepts id are 4180186, only
-#' concept synonyms in the `FULL_SYN` source field that did not have a
-#' lowercased match to the `Preferred_Name` was used.
+#' Process Neo4j files into OMOP Tables
 #'
 #' @rdname process_neo4j_to_omop
 #'
