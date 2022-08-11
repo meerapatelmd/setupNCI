@@ -1409,7 +1409,6 @@ process_neo4j_to_omop <-
 
       # Add and commit newest version to repo
       system(glue::glue("git add {omop_folder}"))
-      system(glue::glue("git commit -m 'bump version {neo4j_nci_version} omop files'"))
+      system(glue::glue("git commit -m 'bump Neo4j version {neo4j_nci_version}'"))
 
-    cli::cli_inform("Use `setup_omop()` to load csvs into tables.")
   }
