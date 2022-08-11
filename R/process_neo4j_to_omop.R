@@ -43,13 +43,6 @@ process_neo4j_to_omop <-
     ############### Variables #######################
     vocabulary_id   <- "CAI NCIt"
     vocabulary_name <- "CAI NCI Thesaurus"
-    nci_version     <- readLines(file.path(output_folder, "neo4j", "README.md"),
-                                    n = 2)[2]
-    nci_version <-
-      trimws(
-      stringr::str_remove_all(string = nci_version,
-                              pattern = "Version")
-      )
 
     neo4j_folder <-
       file.path(
@@ -63,6 +56,28 @@ process_neo4j_to_omop <-
         "omop"
       )
 
+    # Getting the version from neo4j which is what the omop
+    # files are updated to
+    neo4j_nci_version     <- readLines(file.path(neo4j_folder, "README.md"),
+                                    n = 2)[2]
+    neo4j_nci_version <-
+      trimws(
+      stringr::str_remove_all(string = neo4j_nci_version,
+                              pattern = "Version")
+      )
+
+    # Getting the version from omop which is what it is being replaced with
+    omop_nci_version     <- readLines(file.path(omop_folder, "README.md"),
+                                       n = 2)[2]
+    omop_nci_version <-
+      trimws(
+        stringr::str_remove_all(string = omop_nci_version,
+                                pattern = "Version")
+      )
+
+    #################################################################
+    ############### Converting Node and Edges #######################
+    #################################################################
       node <-
         readr::read_csv(
           file =
@@ -73,6 +88,8 @@ process_neo4j_to_omop <-
           col_types = readr::cols(.default = "c"),
           show_col_types = FALSE
         )
+
+    cli::cli_inform("There are {nrow(node)} nodes in version {neo4j_nci_version}.")
       # > node
       # # A tibble: 166,403 × 64
       # concept_id               code  Semantic_Type Preferred_Name UMLS_CUI FDA_UNII_Code Contributing_So… `Legacy Concep…` FULL_SYN DEFINITION label Concept_Status ALT_DEFINITION NCI_META_CUI
@@ -120,11 +137,16 @@ process_neo4j_to_omop <-
       # 9 C100000 subClassOf                         C99521 asserted
       # 10 C100000 Procedure_Has_Target_Anatomy       C12686 inherited
       # # … with 1,104,744 more rows
+      cli::cli_inform("There are {nrow(edge)} edges in version {neo4j_nci_version}.")
 
 
 
-      # I am subseting edges into classification (ancestors)
-      # and relationships
+      # Edges are subset into classification based on the
+      # 'subClassOf' or relationships (any other relationship)
+      # The classification subset is then doubled by generating the
+      # inverse 'Subsumes (CAI)' relationship
+
+      ######### Edges is filtered for classifications ##############
       classification <-
         edge %>%
         dplyr::filter(
@@ -156,6 +178,7 @@ process_neo4j_to_omop <-
       # 10 C100007        Is a            subClassOf (NCIt) subClassOf C99896                       1                1
       # # … with 190,394 more rows
 
+      ######### Classification inverse is generated from the classification subset ###########
       classification_b <-
         edge %>%
         dplyr::filter(
@@ -187,6 +210,8 @@ process_neo4j_to_omop <-
       # 10 C99896         Subsumes        Subsumes (CAI)    subClassOf C100007                      1                1
       # # … with 190,394 more rows
 
+      ################## edges to all other relationships ####################
+      ################## NOTE: inverse of relationship is not added as in the classifications #########
       relationships <-
         edge %>%
         dplyr::filter(
@@ -218,13 +243,16 @@ process_neo4j_to_omop <-
       # 10 C100000        Concept_In_Subset                  Concept_In_Subset                  Concept_In_Subset                  C66830                       0                0
       # # … with 914,340 more rows
 
+
+      ########## Classifications + Inverse Classifications + Relationships
+      ########## and converted into a staged Concept Relationship table
       concept_relationship_stage <-
         dplyr::bind_rows(
           classification,
           classification_b,
           relationships
         ) %>%
-        dplyr::left_join(
+        dplyr::full_join(
           node %>%
             dplyr::select(
               concept_code_1 = code,
@@ -232,7 +260,7 @@ process_neo4j_to_omop <-
             ),
           by = "concept_code_1"
         ) %>%
-        dplyr::left_join(
+        dplyr::full_join(
           node %>%
             dplyr::select(
               concept_code_2 = code,
@@ -241,6 +269,8 @@ process_neo4j_to_omop <-
           by = "concept_code_2"
         ) %>%
         dplyr::distinct()
+
+
       # > concept_relationship_stage
       # # A tibble: 1,295,158 × 9
       # concept_code_1 relationship_id relationship_name rel_type   concept_code_2 is_hierarchical defines_ancestry concept_name_1                                                 concept_name_2
@@ -279,7 +309,10 @@ process_neo4j_to_omop <-
         unname()
       # [1] "C1000"   "C10000"  "C100000" "C100001" "C100002" "C100003" [ reached getOption("max.print") -- omitted 135203 entries ]
 
-      pre_domain_map <-
+      ######### Concept Relationships are appended with the Root and Leaf concept classes
+      ######### at concept 1 and concept 2 which will then be selected for
+      ######### into the final Concept Table
+      concept_map <-
         concept_relationship_stage %>%
         dplyr::mutate(
           concept_class_id_1 =
@@ -296,7 +329,8 @@ process_neo4j_to_omop <-
             )
         ) %>%
         dplyr::distinct()
-      # > pre_domain_map
+
+      # > concept_map
       # # A tibble: 1,295,158 × 11
       # concept_code_1 relationship_id relationship_name rel_type   concept_code_2 is_hierarchical defines_ancestry concept_name_1               concept_name_2 concept_class_i… concept_class_i…
       # <chr>          <chr>           <chr>             <chr>      <chr>                    <dbl>            <dbl> <chr>                        <chr>          <chr>            <chr>
@@ -312,17 +346,18 @@ process_neo4j_to_omop <-
       # 10 C100007        Is a            subClassOf (NCIt) subClassOf C99896                       1                1 Previously Implanted Cardia… Cardiac Lead … Leaf             SubClass
       # # … with 1,295,148 more rows
 
-
+      # Concepts on both sides of the Concept Relationship
+      # table are united into a staged Concepts table
       concepts_staged <-
         dplyr::bind_rows(
-          pre_domain_map %>%
+          concept_map %>%
             dplyr::transmute(
               concept_code = concept_code_1,
               concept_name = concept_name_1,
               concept_class_id = concept_class_id_1,
               domain_id = "Observation"
             ),
-          pre_domain_map %>%
+          concept_map %>%
             dplyr::transmute(
               concept_code = concept_code_2,
               concept_name = concept_name_2,
@@ -392,6 +427,7 @@ process_neo4j_to_omop <-
       # 10 Previously Implanted Cardiac Lead                                   Observat… CAI NCIt      Leaf             NA               C100007      1970-01-01       2099-12-31     NA
       # # … with 166,393 more rows
 
+      ## Adding the date data to the staged concept relationships table
       concept_relationship_stage2 <-
         concept_relationship_stage %>%
         dplyr::transmute(
@@ -429,30 +465,16 @@ process_neo4j_to_omop <-
       # 10 C100007        C99896         Is a            1970-01-01       2099-12-31     NA
       # # … with 1,295,148 more rows
 
+      ############################ Diffs from Previous Version #############################
       # Reading prior relationship file
       current_file <-
         file.path(omop_folder, "RELATIONSHIP.csv")
 
-      if (file.exists(current_file)) {
+      current_relationship <-
+        readr::read_csv(
+          file = current_file,
+          col_types = readr::cols(.default = "c"))
 
-        current_relationship <-
-          readr::read_csv(
-            file = current_file,
-            col_types = readr::cols(.default = "c"))
-
-      } else {
-
-        current_relationship <-
-          tibble::tribble(
-            ~relationship_id,
-            ~relationship_name,
-            ~is_hierarchical,
-            ~defines_ancestry,
-            ~reverse_relationship_id,
-            ~relationship_concept_id
-          )
-
-      }
 
       # > current_relationship
       # # A tibble: 134 × 6
@@ -531,13 +553,12 @@ process_neo4j_to_omop <-
 
       # If there are any new relationships in the newest version of NCIt,
       # a new concept id is assigned.
-      # The last relationship_id is taken from the log and converted to
-      # double to be able to treated as a numeric. Integer cannot be
-      # used because the value is too large to be treated as one.
-
-      last_relationship_id <- as.double(current_log$relationship_concept_id)
+      # The last relationship_id is taken from current relationships based on the max value. Integer cannot be
+      # used because the value is too large to be treated as one so it is first converted to double
+      # and then to character
+      last_relationship_id <- as.character(max(as.double(current_relationship$relationship_concept_id)))
       # > last_relationship_id
-      # [1] 7.001e+09
+      # [1] "7001000136"
 
       # Any new relationships are subset
       # and if there are any rows, new relationship_concept_id
@@ -560,23 +581,24 @@ process_neo4j_to_omop <-
           dplyr::distinct() %>%
           tibble::rowid_to_column("rowid") %>%
           dplyr::mutate(relationship_concept_id =
-                          as.character(last_relationship_id+rowid)) %>%
+                          as.character(as.double(last_relationship_id)+rowid)) %>%
           dplyr::select(-rowid) %>%
           dplyr::distinct()
 
-        cli::cli_inform("{.var relationship_concept_id} {min(relationship_stage3a$relationship_concept_id)} to {max(relationship_stage3a$relationship_concept_id)} assigned.")
+        cli::cli_inform("{.var relationship_concept_id} {as.character(min(as.double(relationship_stage3a$relationship_concept_id)))} to {as.character(max(as.double(relationship_stage3a$relationship_concept_id)))} assigned.")
 
 
       } else {
 
-        cli::cli_inform("No new relationships found in version {nci_version} compared to prior version.")
+        cli::cli_inform("No new relationships found in Neo4j version {neo4j_nci_version} compared to OMOP version {omop_nci_version}.")
 
       }
 
+
+      ########### New Relationships (if any) are combined with the old relationships ################
       relationship_stage3b <-
         relationship_stage2 %>%
         dplyr::filter(!is.na(relationship_concept_id))
-
 
       relationship_stage4 <-
         dplyr::bind_rows(
@@ -589,7 +611,6 @@ process_neo4j_to_omop <-
       current_file <-
         file.path(omop_folder, "CONCEPT.csv")
 
-      if (file.exists(current_file)) {
       current_concept <-
         readr::read_csv(
           file = current_file,
@@ -600,12 +621,6 @@ process_neo4j_to_omop <-
                         valid_end_date,
                         invalid_reason)
 
-      } else {
-
-      current_concept <-
-        tibble::tribble(~concept_code, ~concept_id, ~valid_start_date, ~valid_end_date, ~invalid_reason)
-
-      }
 
       # Joining to previous CONCEPT by code to determine
       # new concept_id assignment
@@ -677,7 +692,7 @@ process_neo4j_to_omop <-
 
       } else {
 
-        cli::cli_inform("No new concepts found in version {nci_version} compared to prior version.")
+        cli::cli_inform("No new concepts found in Neo4j version {neo4j_nci_version} compared to OMOP version {omop_nci_version}.")
 
 
       }
@@ -742,10 +757,14 @@ process_neo4j_to_omop <-
           "tmp"
         )
 
-      tmp_folder <-
-        makedirs(tmp_folder,
-          verbose = FALSE
-        )
+      if (dir.exists(tmp_folder)) {
+
+        unlink(tmp_folder,
+               recursive = TRUE)
+
+      }
+
+      dir.create(tmp_folder)
 
       j <- 0
       total <- length(roots_list)
@@ -1093,13 +1112,12 @@ process_neo4j_to_omop <-
           vocabulary_id,
           vocabulary_name,
           vocabulary_reference = "https://evs.nci.nih.gov/ftp1/NCI_Thesaurus/",
-          vocabulary_version = nci_version,
+          vocabulary_version = neo4j_nci_version,
           vocabulary_concept_id = 7000000001
         )
 
-      # Return missing concept ancestor concepts back into concept
-      concept_ancestor_stage2
 
+      ############ Writing Output
       output_map <-
         list(
           CONCEPT = concepts_staged3,
@@ -1111,6 +1129,49 @@ process_neo4j_to_omop <-
           CONCEPT_CLASS = concept_class_stage
         ) %>%
         map(dplyr::distinct)
+
+
+      ##### Tests ####
+
+      if (!all(output_map$CONCEPT_RELATIONSHIP$concept_id_1 %in% output_map$CONCEPT$concept_id)) {
+
+
+        cli::cli_warn("Invalid concept_id_1s present.")
+
+
+      }
+
+      if (!all(output_map$CONCEPT_RELATIONSHIP$concept_id_2 %in% output_map$CONCEPT$concept_id)) {
+
+
+        cli::cli_warn("Invalid concept_id_2s present.")
+
+
+      }
+
+      if (!all(output_map$CONCEPT_SYNONYM$concept_id %in% output_map$CONCEPT$concept_id)) {
+
+
+        cli::cli_warn("Invalid concept_ids present in CONCEPT_SYNONYM.")
+
+
+      }
+
+      if (!all(output_map$CONCEPT_ANCESTOR$ancestor_concept_id %in% output_map$CONCEPT$concept_id)) {
+
+
+        cli::cli_warn("Invalid ancestor_concept_ids present.")
+
+
+      }
+
+      if (!all(output_map$CONCEPT_ANCESTOR$descendant_concept_id %in% output_map$CONCEPT$concept_id)) {
+
+
+        cli::cli_warn("Invalid descendant_concept_ids present.")
+
+
+      }
 
 
       for (i in seq_along(output_map)) {
@@ -1277,7 +1338,7 @@ process_neo4j_to_omop <-
       readme_file <- file.path(omop_folder, "README.md")
       cat(
         "# NCI Thesaurus (OMOP Format)  ",
-        glue::glue("Version {nci_version}  "),
+        glue::glue("Version {neo4j_nci_version}  "),
         "---  ",
         "  ",
         file = readme_file,
@@ -1348,7 +1409,7 @@ process_neo4j_to_omop <-
 
       # Add and commit newest version to repo
       system(glue::glue("git add {omop_folder}"))
-      system(glue::glue("git commit -m 'bump version {nci_version} omop files'"))
+      system(glue::glue("git commit -m 'bump version {neo4j_nci_version} omop files'"))
 
     cli::cli_inform("Use `setup_omop()` to load csvs into tables.")
   }
