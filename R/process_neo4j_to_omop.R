@@ -40,9 +40,9 @@ process_neo4j_to_omop <-
 
     cli::cli_h1("process_neo4j_to_omop")
 
-    vocabulary_id <- "CAI NCIt"
+    vocabulary_id   <- "CAI NCIt"
     vocabulary_name <- "CAI NCI Thesaurus"
-    nci_version <- readLines(file.path(output_folder, "neo4j", "README.md"),
+    nci_version     <- readLines(file.path(output_folder, "neo4j", "README.md"),
                                     n = 2)[2]
     nci_version <-
       trimws(
@@ -63,22 +63,6 @@ process_neo4j_to_omop <-
         "omop"
       )
 
-
-    final_files <-
-      c(
-        "CONCEPT_ANCESTOR.csv",
-        "CONCEPT_CLASS.csv",
-        "CONCEPT_RELATIONSHIP.csv",
-        "CONCEPT_SYNONYM.csv",
-        "CONCEPT.csv",
-        "RELATIONSHIP.csv",
-        "VOCABULARY.csv"
-      )
-    final_paths <-
-      file.path(
-        omop_folder,
-        final_files
-      )
 
       # Metadata Tables VOCABULARY requires
       # no processing and is given 7000000000 (7-billion prefix)
@@ -461,36 +445,17 @@ process_neo4j_to_omop <-
       # 10 C100007        C99896         Is a            1970-01-01       2099-12-31     NA
       # # … with 1,295,148 more rows
 
-      # Reading max concept ids from log.json
-      current_file <-
-        "inst/data/omop/current/log.json"
-
-      if (file.exists(current_file)) {
-        current_log <-
-        jsonlite::read_json(
-          path = current_file,
-          simplifyVector = TRUE
-        )
-
-      } else {
-
-      current_log <-
-        list(
-          nci_version = "NA",
-          concept_id = "7000000000",
-          relationship_concept_id = "7001000000"
-        )
-      }
-
       # Reading prior relationship file
       current_file <-
-        "inst/data/omop/current/RELATIONSHIP.csv"
+        file.path(omop_folder, "RELATIONSHIP.csv")
 
       if (file.exists(current_file)) {
+
       current_relationship <-
         readr::read_csv(
           file = current_file,
           col_types = readr::cols(.default = "c"))
+
       } else {
 
       current_relationship <-
@@ -619,7 +584,7 @@ process_neo4j_to_omop <-
 
       } else {
 
-        cli::cli_inform("No new relationships found in version {nci_version} compared to prior version {current_log$nci_version}.")
+        cli::cli_inform("No new relationships found in version {nci_version} compared to prior version.")
 
       }
 
@@ -637,7 +602,7 @@ process_neo4j_to_omop <-
 
       # Getting existing concept_ids
       current_file <-
-        "inst/data/omop/current/CONCEPT.csv"
+        file.path(omop_folder, "CONCEPT.csv")
 
       if (file.exists(current_file)) {
       current_concept <-
@@ -727,7 +692,7 @@ process_neo4j_to_omop <-
 
       } else {
 
-        cli::cli_inform("No new concepts found in version {nci_version} compared to prior version {current_log$nci_version}.")
+        cli::cli_inform("No new concepts found in version {nci_version} compared to prior version.")
 
 
       }
