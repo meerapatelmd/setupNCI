@@ -110,7 +110,7 @@ process_owl_to_omop <-
     system(
       glue::glue(
       "git add {inst_folder}",
-      "git commit -m 'add data'",
+      "git commit -m 'add Neo4j version {neo4j_nci_version} and OMOP version {omop_nci_version} zip'",
       .sep = "\n"
       )
     )
