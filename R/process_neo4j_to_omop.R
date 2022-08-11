@@ -40,6 +40,7 @@ process_neo4j_to_omop <-
 
     cli::cli_h1("process_neo4j_to_omop")
 
+    ############### Variables #######################
     vocabulary_id   <- "CAI NCIt"
     vocabulary_name <- "CAI NCI Thesaurus"
     nci_version     <- readLines(file.path(output_folder, "neo4j", "README.md"),
@@ -56,26 +57,11 @@ process_neo4j_to_omop <-
         "neo4j"
       )
 
-
     omop_folder <-
       file.path(
         output_folder,
         "omop"
       )
-
-
-      # Metadata Tables VOCABULARY requires
-      # no processing and is given 7000000000 (7-billion prefix)
-      # Other metadata tables with 7000000000: CONCEPT_CLASS (produced from
-      # final CONCEPTS table)
-      vocabulary_stage <-
-        tibble(
-          vocabulary_id,
-          vocabulary_name,
-          vocabulary_reference = "https://evs.nci.nih.gov/ftp1/NCI_Thesaurus/",
-          vocabulary_version = nci_version,
-          vocabulary_concept_id = 7000000001
-        )
 
       node <-
         readr::read_csv(
@@ -341,9 +327,7 @@ process_neo4j_to_omop <-
               concept_code = concept_code_2,
               concept_name = concept_name_2,
               concept_class_id = concept_class_id_2,
-              domain_id = "Observation"
-            )
-        ) %>%
+              domain_id = "Observation")) %>%
         dplyr::distinct() %>%
         dplyr::left_join(
           tibble::tribble(
@@ -451,22 +435,23 @@ process_neo4j_to_omop <-
 
       if (file.exists(current_file)) {
 
-      current_relationship <-
-        readr::read_csv(
-          file = current_file,
-          col_types = readr::cols(.default = "c"))
+        current_relationship <-
+          readr::read_csv(
+            file = current_file,
+            col_types = readr::cols(.default = "c"))
 
       } else {
 
-      current_relationship <-
-        tibble::tribble(
-          ~relationship_id,
-          ~relationship_name,
-          ~is_hierarchical,
-          ~defines_ancestry,
-          ~reverse_relationship_id,
-          ~relationship_concept_id
-        )
+        current_relationship <-
+          tibble::tribble(
+            ~relationship_id,
+            ~relationship_name,
+            ~is_hierarchical,
+            ~defines_ancestry,
+            ~reverse_relationship_id,
+            ~relationship_concept_id
+          )
+
       }
 
       # > current_relationship
@@ -1085,6 +1070,9 @@ process_neo4j_to_omop <-
         arrange(concept_id)
 
 
+      ############## METADATA TABLES ####################
+      # 1. Concept Class
+      # 2. Vocabulary
       concept_class_stage <-
         concepts_staged3 %>%
         dplyr::transmute(concept_class_id,
@@ -1095,6 +1083,22 @@ process_neo4j_to_omop <-
         tibble::rowid_to_column("rowid") %>%
         dplyr::mutate(concept_class_concept_id = 7000000001 + rowid) %>%
         dplyr::select(-rowid)
+
+      # Metadata Tables VOCABULARY requires
+      # no processing and is given 7000000000 (7-billion prefix)
+      # Other metadata tables with 7000000000: CONCEPT_CLASS (produced from
+      # final CONCEPTS table)
+      vocabulary_stage <-
+        tibble(
+          vocabulary_id,
+          vocabulary_name,
+          vocabulary_reference = "https://evs.nci.nih.gov/ftp1/NCI_Thesaurus/",
+          vocabulary_version = nci_version,
+          vocabulary_concept_id = 7000000001
+        )
+
+      # Return missing concept ancestor concepts back into concept
+      concept_ancestor_stage2
 
       output_map <-
         list(
