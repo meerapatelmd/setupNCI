@@ -1,4 +1,4 @@
-# setupNCI 2.0.0.9000  
+# setupNCI 2.0.0  
 
 
 ## Technical
