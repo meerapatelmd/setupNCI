@@ -7,13 +7,12 @@
 setup_omop(
   conn,
   conn_fun = "pg13::local_connect()",
-  target_schema = "omop_athena_nci",
+  target_schema = "omop_athena_nci_only",
   steps = c("drop_tables", "copy", "log", "indices", "constraints"),
   verbose = TRUE,
   render_sql = TRUE,
   render_only = FALSE,
   checks = "",
-  nci_version,
   log_schema = "public",
   log_table = "setup_nci_omop_log"
 )
