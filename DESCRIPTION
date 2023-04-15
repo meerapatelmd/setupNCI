@@ -1,6 +1,6 @@
 Package: setupNCI
 Title: Load the NCI Metathesaurus into Postgres. 
-Version: 3.0.0
+Version: 3.0.1
 Authors@R: 
     person(given = "Meera",
            family = "Patel",
