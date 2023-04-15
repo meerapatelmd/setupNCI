@@ -1,18 +1,13 @@
 Package: setupNCI
-Title: Load the NCI Metathesaurus, NCI Thesaurus, and the
-    map between both into Postgres. 
-Version: 2.0.0
+Title: Load the NCI Metathesaurus into Postgres. 
+Version: 3.0.0
 Authors@R: 
     person(given = "Meera",
            family = "Patel",
            role = c("aut", "cre"),
            email = "patelmeeray@gmail.com",
            comment = c(ORCID = "0000-0002-3401-3948"))
-Description: Load the NCI Metathesaurus, NCI Thesaurus, and the
-    map between both into Postgres. The NCI Metathesaurus follows the same
-    standards as those found in the `metathesaurus` R package while the
-    NCI Thesaurus and the Code to CUI Map are two additional tables added
-    during the setup process.
+Description: Load the NCI Metathesaurus into Postgres
 License: MIT + file LICENSE
 URL: https://meerapatelmd.github.io/setupNCI/,
     https://github.com/meerapatelmd/setupNCI/

@@ -1,3 +1,8 @@
+# setupNCI 3.0.0  
+
+* Keep only NCI Metathesaurus load
+
+
 # setupNCI 2.0.0  
 
 

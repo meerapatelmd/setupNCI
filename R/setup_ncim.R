@@ -1,7 +1,5 @@
 #' @title
 #' Instantiate NCI Metathesaurus
-#' @inherit setup description
-#' @inheritParams setup
 #' @rdname setup_ncim
 #' @export
 #' @importFrom pg13 lsSchema send lsTables dropTable
